@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "digital_id"
+version = "0.1.0"
+description = "Console backend for managing federated Digital IDs"
+requires-python = ">=3.14"
+authors = [{ name = "Divit Kothari" }]
+readme = "README.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["src"]
