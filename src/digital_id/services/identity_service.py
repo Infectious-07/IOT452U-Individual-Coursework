@@ -61,3 +61,32 @@ class IdentityService:
         updated = current.with_name(clean_name, self._clock())
         self._identities.update(updated)
         return updated
+
+    def suspend(self, actor: OrganisationRole, identity_id: str) -> DigitalID:
+        require(actor, "suspend")
+        return self._transition(identity_id, IdentityStatus.SUSPENDED)
+
+    def revoke(self, actor: OrganisationRole, identity_id: str) -> DigitalID:
+        require(actor, "revoke")
+        return self._transition(identity_id, IdentityStatus.REVOKED)
+
+    def reactivate(self, actor: OrganisationRole, identity_id: str) -> DigitalID:
+        require(actor, "reactivate")
+        return self._transition(identity_id, IdentityStatus.ACTIVE)
+
+    def _transition(self, identity_id: str, target: IdentityStatus) -> DigitalID:
+        clean_id = validate_identity_id(identity_id)
+        current = self._identities.get(clean_id)
+        # revoked is terminal; no transitions are allowed afterwards
+        if current.status is IdentityStatus.REVOKED and target is not IdentityStatus.REVOKED:
+            raise InvalidTransitionError(current.status.value, target.value)
+        # repeated request with the same target is a no-op
+        if current.status is target:
+            return current
+        updated = current.with_status(target, self._clock())
+        self._identities.update(updated)
+        return updated
+
+    def get(self, identity_id: str) -> DigitalID:
+        clean_id = validate_identity_id(identity_id)
+        return self._identities.get(clean_id)
