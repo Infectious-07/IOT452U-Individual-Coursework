@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Callable
 
 from ..authorisation.roles import OrganisationRole, require
+from ..domain.exceptions import InvalidTransitionError
 from ..domain.identity import DigitalID, IdentityStatus
 from ..domain.validators import validate_dob, validate_identity_id, validate_name
 from ..persistence.identity_repository import IdentityRepository
@@ -40,3 +41,23 @@ class IdentityService:
         )
         self._identities.add(identity)
         return identity
+
+    def update_name(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+        new_name: str,
+    ) -> DigitalID:
+        require(actor, "update")
+        clean_id = validate_identity_id(identity_id)
+        clean_name = validate_name(new_name)
+        current = self._identities.get(clean_id)
+        # changes are not accepted on revoked identities; the record is final
+        if current.status is IdentityStatus.REVOKED:
+            raise InvalidTransitionError(current.status.value, "update")
+        # idempotent: no change means no write
+        if current.name == clean_name:
+            return current
+        updated = current.with_name(clean_name, self._clock())
+        self._identities.update(updated)
+        return updated
