@@ -7,6 +7,7 @@ from ..authorisation.roles import OrganisationRole, require
 from ..domain.audit import AuditAction
 from ..domain.exceptions import InvalidTransitionError
 from ..domain.identity import DigitalID, IdentityStatus
+from ..domain.transitions import assert_allowed
 from ..domain.validators import validate_dob, validate_identity_id, validate_name
 from ..persistence.identity_repository import IdentityRepository
 from .audit_service import AuditService
@@ -99,9 +100,7 @@ class IdentityService:
     ) -> DigitalID:
         clean_id = validate_identity_id(identity_id)
         current = self._identities.get(clean_id)
-        # revoked is terminal; no transitions are allowed afterwards
-        if current.status is IdentityStatus.REVOKED and target is not IdentityStatus.REVOKED:
-            raise InvalidTransitionError(current.status.value, target.value)
+        assert_allowed(current.status, target)
         # repeated request with the same target is a no-op and not audited
         if current.status is target:
             return current
