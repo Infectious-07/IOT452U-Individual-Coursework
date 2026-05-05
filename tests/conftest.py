@@ -44,3 +44,16 @@ def audit_service(tmp_path: Path, clock: Callable[[], datetime]) -> AuditService
     connection = connect(tmp_path / "audit_service.sqlite")
     bootstrap(connection)
     return AuditService(AuditRepository(connection), clock=clock)
+
+
+@pytest.fixture
+def wired_services(tmp_path: Path, clock: Callable[[], datetime]):
+    from digital_id.services.verification import VerificationService
+
+    connection = connect(tmp_path / "wired.sqlite")
+    bootstrap(connection)
+    identities = IdentityRepository(connection)
+    audit = AuditService(AuditRepository(connection), clock=clock)
+    identity_service = IdentityService(identities, audit, clock=clock)
+    verification = VerificationService(identities, audit, clock=clock)
+    return identity_service, verification, audit
