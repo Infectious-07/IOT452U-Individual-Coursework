@@ -102,3 +102,23 @@ class VerificationService:
             period_start=period_start,
             period_end=period_end,
         )
+
+    def verify_for_dvla(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+    ) -> DvlaResponse:
+        if actor is not OrganisationRole.DVLA:
+            raise AuthorisationError(actor.value, "verify_for_dvla")
+        self._ensure_verify_role(actor)
+        clean_id = validate_identity_id(identity_id)
+        exists, status, _ = self._exists_and_status(clean_id)
+        active_now = status is IdentityStatus.ACTIVE
+        # a current suspension is the only signal DVLA gets for a restriction
+        restricted_now = status is IdentityStatus.SUSPENDED
+        return DvlaResponse(
+            identity_id=clean_id,
+            exists=exists,
+            active_now=active_now,
+            restricted_now=restricted_now,
+        )
