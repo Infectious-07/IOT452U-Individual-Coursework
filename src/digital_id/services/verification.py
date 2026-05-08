@@ -122,3 +122,16 @@ class VerificationService:
             active_now=active_now,
             restricted_now=restricted_now,
         )
+
+    def verify_validity(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+    ) -> ValidityResponse:
+        if actor not in (OrganisationRole.BANK, OrganisationRole.EMPLOYER):
+            raise AuthorisationError(actor.value, "verify_validity")
+        self._ensure_verify_role(actor)
+        clean_id = validate_identity_id(identity_id)
+        exists, status, _ = self._exists_and_status(clean_id)
+        valid_now = exists and status is IdentityStatus.ACTIVE
+        return ValidityResponse(identity_id=clean_id, valid_now=valid_now)
