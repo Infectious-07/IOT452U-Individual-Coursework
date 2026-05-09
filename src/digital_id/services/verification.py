@@ -135,3 +135,21 @@ class VerificationService:
         exists, status, _ = self._exists_and_status(clean_id)
         valid_now = exists and status is IdentityStatus.ACTIVE
         return ValidityResponse(identity_id=clean_id, valid_now=valid_now)
+
+    def verify_lookup(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+    ) -> LookupResponse:
+        if actor not in (OrganisationRole.WELFARE, OrganisationRole.LOCAL_AUTHORITY):
+            raise AuthorisationError(actor.value, "verify_lookup")
+        self._ensure_verify_role(actor)
+        clean_id = validate_identity_id(identity_id)
+        exists, status, name = self._exists_and_status(clean_id)
+        valid_now = exists and status is IdentityStatus.ACTIVE
+        # only the name is shared back; dob and audit history are withheld
+        return LookupResponse(
+            identity_id=clean_id,
+            valid_now=valid_now,
+            name=name if valid_now else None,
+        )
