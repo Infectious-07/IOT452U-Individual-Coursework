@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, time
-from typing import Any, Callable, Mapping
+from typing import Any
 
 from ..authorisation.roles import OrganisationRole, require
 from ..domain.audit import AuditAction

@@ -19,7 +19,10 @@ def sample_identity() -> DigitalID:
 
 
 def test_identity_is_immutable(sample_identity: DigitalID) -> None:
-    with pytest.raises(Exception):
+    # frozen dataclasses raise FrozenInstanceError on attribute assignment
+    from dataclasses import FrozenInstanceError
+
+    with pytest.raises(FrozenInstanceError):
         sample_identity.name = "Other"
 
 

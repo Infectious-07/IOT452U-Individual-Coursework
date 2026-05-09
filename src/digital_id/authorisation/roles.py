@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from ..domain.exceptions import AuthorisationError
 
 
-class OrganisationRole(str, Enum):
+class OrganisationRole(StrEnum):
     CENTRAL_AUTHORITY = "CENTRAL_AUTHORITY"
     TAX = "TAX"
     DVLA = "DVLA"

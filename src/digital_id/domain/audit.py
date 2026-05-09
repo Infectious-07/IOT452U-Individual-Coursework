@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
-from typing import Any, Mapping
+from enum import StrEnum
+from typing import Any
 
 
-class AuditAction(str, Enum):
+class AuditAction(StrEnum):
     # lifecycle actions, owned by the central authority
     CREATE = "CREATE"
     UPDATE = "UPDATE"

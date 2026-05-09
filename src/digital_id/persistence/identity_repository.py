@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterable
 from datetime import date, datetime
-from typing import Iterable
 
 from ..domain.exceptions import DuplicateIdentityError, IdentityNotFoundError
 from ..domain.identity import DigitalID, IdentityStatus

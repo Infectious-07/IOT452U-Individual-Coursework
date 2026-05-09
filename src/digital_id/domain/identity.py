@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 
 
-class IdentityStatus(str, Enum):
+class IdentityStatus(StrEnum):
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
     REVOKED = "REVOKED"
@@ -22,9 +22,9 @@ class DigitalID:
     updated_at: datetime
 
     # returns a new instance with the updated name, leaving the original untouched
-    def with_name(self, new_name: str, now: datetime) -> "DigitalID":
+    def with_name(self, new_name: str, now: datetime) -> DigitalID:
         return replace(self, name=new_name, updated_at=now)
 
     # returns a new instance with the updated status, leaving the original untouched
-    def with_status(self, new_status: IdentityStatus, now: datetime) -> "DigitalID":
+    def with_status(self, new_status: IdentityStatus, now: datetime) -> DigitalID:
         return replace(self, status=new_status, updated_at=now)

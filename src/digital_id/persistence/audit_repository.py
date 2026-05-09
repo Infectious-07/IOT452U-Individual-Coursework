@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 from ..domain.audit import AuditAction, AuditEvent
 

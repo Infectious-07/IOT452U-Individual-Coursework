@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable
 
 from ..authorisation.roles import OrganisationRole, require
 from ..domain.audit import AuditAction
