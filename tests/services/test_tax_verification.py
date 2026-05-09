@@ -67,3 +67,27 @@ def test_tax_check_blocked_for_other_roles(wired_services) -> None:
         verification.verify_for_tax(
             OrganisationRole.BANK, "ID-001", date(2026, 1, 1), date(2026, 3, 31)
         )
+
+
+def test_tax_flags_suspension_starting_before_period(wired_services) -> None:
+    identity_service, verification, _ = wired_services
+    # suspend now, reactivate later; both happen before the queried period
+    identity_service.create(CENTRAL, "ID-001", "Ada Lovelace", "1990-05-01")
+    identity_service.suspend(CENTRAL, "ID-001")
+    # the only event inside the period is the REACTIVATE, but the identity
+    # was suspended at the period start so the flag must still be true
+    response = verification.verify_for_tax(
+        OrganisationRole.TAX, "ID-001", date(2026, 1, 1), date(2026, 12, 31)
+    )
+    assert response.suspended_in_period is True
+
+
+def test_tax_does_not_flag_current_suspension_outside_period(wired_services) -> None:
+    identity_service, verification, _ = wired_services
+    # the identity is suspended now, but the queried period ended before that
+    identity_service.create(CENTRAL, "ID-001", "Ada Lovelace", "1990-05-01")
+    identity_service.suspend(CENTRAL, "ID-001")
+    response = verification.verify_for_tax(
+        OrganisationRole.TAX, "ID-001", date(2020, 1, 1), date(2020, 12, 31)
+    )
+    assert response.suspended_in_period is False

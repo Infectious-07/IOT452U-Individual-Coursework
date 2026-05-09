@@ -67,6 +67,21 @@ class VerificationService:
     def _ensure_verify_role(self, actor: OrganisationRole) -> None:
         require(actor, "verify")
 
+    # walks audit events up to a moment to derive the status at that moment
+    def _status_at(self, identity_id: str, when: datetime) -> IdentityStatus | None:
+        events = self._audit.events_between(datetime.min, when, identity_id)
+        status: IdentityStatus | None = None
+        for event in events:
+            if event.action is AuditAction.CREATE:
+                status = IdentityStatus.ACTIVE
+            elif event.action is AuditAction.SUSPEND:
+                status = IdentityStatus.SUSPENDED
+            elif event.action is AuditAction.REACTIVATE:
+                status = IdentityStatus.ACTIVE
+            elif event.action is AuditAction.REVOKE:
+                status = IdentityStatus.REVOKED
+        return status
+
     def _record_verify(
         self,
         actor: OrganisationRole,
@@ -94,12 +109,14 @@ class VerificationService:
         if exists:
             window_start = datetime.combine(period_start, time.min)
             window_end = datetime.combine(period_end, time.max)
-            events = self._audit.events_between(window_start, window_end, clean_id)
-            suspended_in_period = any(event.action is AuditAction.SUSPEND for event in events)
-            # if the identity is currently suspended and the period overlaps the
-            # current state, treat that as a suspension within the period too
-            if status is IdentityStatus.SUSPENDED:
-                suspended_in_period = True
+            # the identity may have been suspended before the period and only
+            # reactivated within it, so we derive the status at period start
+            status_at_start = self._status_at(clean_id, window_start)
+            in_period = self._audit.events_between(window_start, window_end, clean_id)
+            suspended_in_period = (
+                status_at_start is IdentityStatus.SUSPENDED
+                or any(event.action is AuditAction.SUSPEND for event in in_period)
+            )
         response = TaxResponse(
             identity_id=clean_id,
             exists=exists,
