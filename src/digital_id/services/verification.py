@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time
-from typing import Callable
+from typing import Any, Callable, Mapping
 
 from ..authorisation.roles import OrganisationRole, require
 from ..domain.audit import AuditAction
@@ -64,10 +64,15 @@ class VerificationService:
         return True, identity.status, identity.name
 
     def _ensure_verify_role(self, actor: OrganisationRole) -> None:
-        try:
-            require(actor, "verify")
-        except AuthorisationError:
-            raise
+        require(actor, "verify")
+
+    def _record_verify(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+        payload: Mapping[str, Any],
+    ) -> None:
+        self._audit.record(actor, AuditAction.VERIFY, identity_id, payload)
 
     def verify_for_tax(
         self,
@@ -94,7 +99,7 @@ class VerificationService:
             # current state, treat that as a suspension within the period too
             if status is IdentityStatus.SUSPENDED:
                 suspended_in_period = True
-        return TaxResponse(
+        response = TaxResponse(
             identity_id=clean_id,
             exists=exists,
             active_now=active_now,
@@ -102,6 +107,19 @@ class VerificationService:
             period_start=period_start,
             period_end=period_end,
         )
+        self._record_verify(
+            actor,
+            clean_id,
+            {
+                "kind": "tax",
+                "exists": exists,
+                "active_now": active_now,
+                "suspended_in_period": suspended_in_period,
+                "period_start": period_start.isoformat(),
+                "period_end": period_end.isoformat(),
+            },
+        )
+        return response
 
     def verify_for_dvla(
         self,
@@ -116,12 +134,23 @@ class VerificationService:
         active_now = status is IdentityStatus.ACTIVE
         # a current suspension is the only signal DVLA gets for a restriction
         restricted_now = status is IdentityStatus.SUSPENDED
-        return DvlaResponse(
+        response = DvlaResponse(
             identity_id=clean_id,
             exists=exists,
             active_now=active_now,
             restricted_now=restricted_now,
         )
+        self._record_verify(
+            actor,
+            clean_id,
+            {
+                "kind": "dvla",
+                "exists": exists,
+                "active_now": active_now,
+                "restricted_now": restricted_now,
+            },
+        )
+        return response
 
     def verify_validity(
         self,
@@ -134,7 +163,9 @@ class VerificationService:
         clean_id = validate_identity_id(identity_id)
         exists, status, _ = self._exists_and_status(clean_id)
         valid_now = exists and status is IdentityStatus.ACTIVE
-        return ValidityResponse(identity_id=clean_id, valid_now=valid_now)
+        response = ValidityResponse(identity_id=clean_id, valid_now=valid_now)
+        self._record_verify(actor, clean_id, {"kind": "validity", "valid_now": valid_now})
+        return response
 
     def verify_lookup(
         self,
@@ -148,8 +179,14 @@ class VerificationService:
         exists, status, name = self._exists_and_status(clean_id)
         valid_now = exists and status is IdentityStatus.ACTIVE
         # only the name is shared back; dob and audit history are withheld
-        return LookupResponse(
+        response = LookupResponse(
             identity_id=clean_id,
             valid_now=valid_now,
             name=name if valid_now else None,
         )
+        self._record_verify(
+            actor,
+            clean_id,
+            {"kind": "lookup", "valid_now": valid_now},
+        )
+        return response
