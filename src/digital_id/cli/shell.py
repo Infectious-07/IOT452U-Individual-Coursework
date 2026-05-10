@@ -76,6 +76,9 @@ class Shell:
             self._write(f"unknown command: {name}")
         except DigitalIdError as err:
             self._write(f"rejected: {err}")
+        except ValueError as err:
+            # raised by command argument parsing and by date.fromisoformat
+            self._write(f"rejected: {err}")
         return True
 
     def run(self) -> None:

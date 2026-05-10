@@ -6,7 +6,6 @@ from typing import Any
 
 from ..authorisation.roles import OrganisationRole
 
-
 # a portal command is a callable that receives the parsed args and prints output
 Handler = Callable[[list[str]], None]
 
