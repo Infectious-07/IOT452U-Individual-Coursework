@@ -117,3 +117,6 @@ class IdentityService:
     def get(self, identity_id: str) -> DigitalID:
         clean_id = validate_identity_id(identity_id)
         return self._identities.get(clean_id)
+
+    def list_all(self) -> list[DigitalID]:
+        return list(self._identities.list_all())

@@ -8,6 +8,7 @@ from ..domain.identity import DigitalID
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService
+from ..services.stats_service import StatsService
 from .base import Portal
 
 
@@ -22,6 +23,7 @@ def build_central_portal(
     identity_service: IdentityService,
     audit_service: AuditService,
     export_service: ExportService,
+    stats_service: StatsService,
     writer: Callable[[str], None],
 ) -> Portal:
     portal = Portal(OrganisationRole.CENTRAL_AUTHORITY, "Central Authority")
@@ -82,12 +84,31 @@ def build_central_portal(
         audit_count = export_service.export_audit(role, directory / "audit.csv")
         writer(f"exported identities={identities_count} audit_events={audit_count}")
 
+    def stats(args: list[str]) -> None:
+        _require_args(args, 0, "stats")
+        snapshot = stats_service.snapshot(role)
+        writer(f"total={snapshot.total}")
+        for status_name, count in snapshot.by_status.items():
+            writer(f"  {status_name}={count}")
+        writer(f"events_last_7_days={snapshot.events_last_7_days}")
+
+    def list_all(args: list[str]) -> None:
+        _require_args(args, 0, "list")
+        records = identity_service.list_all()
+        if not records:
+            writer("no identities")
+            return
+        for identity in records:
+            writer(_format_identity(identity))
+
     portal.register("create", "create a new Digital ID", create)
     portal.register("update", "change the name on an existing Digital ID", update)
     portal.register("suspend", "set a Digital ID to suspended", suspend)
     portal.register("revoke", "revoke a Digital ID permanently", revoke)
     portal.register("reactivate", "reactivate a suspended Digital ID", reactivate)
     portal.register("show", "show the current record for an id", show)
+    portal.register("list", "list every Digital ID record", list_all)
     portal.register("history", "list audit events for an id", history)
     portal.register("export", "write identities and audit CSVs to a directory", export)
+    portal.register("stats", "show counts by status and recent activity", stats)
     return portal
