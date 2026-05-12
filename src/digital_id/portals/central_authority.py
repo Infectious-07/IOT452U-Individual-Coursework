@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 from ..authorisation.roles import OrganisationRole
 from ..domain.identity import DigitalID
 from ..services.audit_service import AuditService
+from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService
 from .base import Portal
 
@@ -19,6 +21,7 @@ def _format_identity(identity: DigitalID) -> str:
 def build_central_portal(
     identity_service: IdentityService,
     audit_service: AuditService,
+    export_service: ExportService,
     writer: Callable[[str], None],
 ) -> Portal:
     portal = Portal(OrganisationRole.CENTRAL_AUTHORITY, "Central Authority")
@@ -70,6 +73,15 @@ def build_central_portal(
                 f"{event.action.value} {event.payload}"
             )
 
+    def export(args: list[str]) -> None:
+        _require_args(args, 1, "export <directory>")
+        directory = Path(args[0])
+        identities_count = export_service.export_identities(
+            role, directory / "identities.csv"
+        )
+        audit_count = export_service.export_audit(role, directory / "audit.csv")
+        writer(f"exported identities={identities_count} audit_events={audit_count}")
+
     portal.register("create", "create a new Digital ID", create)
     portal.register("update", "change the name on an existing Digital ID", update)
     portal.register("suspend", "set a Digital ID to suspended", suspend)
@@ -77,4 +89,5 @@ def build_central_portal(
     portal.register("reactivate", "reactivate a suspended Digital ID", reactivate)
     portal.register("show", "show the current record for an id", show)
     portal.register("history", "list audit events for an id", history)
+    portal.register("export", "write identities and audit CSVs to a directory", export)
     return portal

@@ -17,6 +17,7 @@ from ..portals.consumer import (
     build_validity_portal,
 )
 from ..services.audit_service import AuditService
+from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService
 from ..services.verification import VerificationService
 from .shell import Shell
@@ -26,11 +27,12 @@ def _build_portals(
     identity_service: IdentityService,
     audit_service: AuditService,
     verification: VerificationService,
+    export_service: ExportService,
 ) -> Mapping[OrganisationRole, Portal]:
     writer = print
     return {
         OrganisationRole.CENTRAL_AUTHORITY: build_central_portal(
-            identity_service, audit_service, writer
+            identity_service, audit_service, export_service, writer
         ),
         OrganisationRole.TAX: build_tax_portal(verification, writer),
         OrganisationRole.DVLA: build_dvla_portal(verification, writer),
@@ -57,8 +59,10 @@ def run(settings: Settings | None = None) -> None:
     connection: sqlite3.Connection = connect(config.database_path)
     bootstrap(connection)
     identities = IdentityRepository(connection)
-    audit = AuditService(AuditRepository(connection))
+    audit_repo = AuditRepository(connection)
+    audit = AuditService(audit_repo)
     identity_service = IdentityService(identities, audit)
     verification = VerificationService(identities, audit)
-    portals = _build_portals(identity_service, audit, verification)
+    exports = ExportService(identities, audit_repo)
+    portals = _build_portals(identity_service, audit, verification, exports)
     Shell(portals).run()
