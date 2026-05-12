@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Mapping
-from pathlib import Path
 
 from ..authorisation.roles import OrganisationRole
+from ..config.settings import Settings, load
 from ..persistence.audit_repository import AuditRepository
 from ..persistence.database import bootstrap, connect
 from ..persistence.identity_repository import IdentityRepository
@@ -52,8 +52,9 @@ def _build_portals(
     }
 
 
-def run(db_path: str | Path = "data/digital_id.sqlite") -> None:
-    connection: sqlite3.Connection = connect(db_path)
+def run(settings: Settings | None = None) -> None:
+    config = settings or load()
+    connection: sqlite3.Connection = connect(config.database_path)
     bootstrap(connection)
     identities = IdentityRepository(connection)
     audit = AuditService(AuditRepository(connection))
