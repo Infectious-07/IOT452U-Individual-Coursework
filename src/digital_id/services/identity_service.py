@@ -4,6 +4,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from ..authorisation.roles import OrganisationRole, require
+from ..clock import utc_now
 from ..domain.audit import AuditAction
 from ..domain.exceptions import InvalidTransitionError
 from ..domain.identity import DigitalID, IdentityStatus
@@ -18,7 +19,7 @@ class IdentityService:
         self,
         identities: IdentityRepository,
         audit: AuditService,
-        clock: Callable[[], datetime] = datetime.utcnow,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._identities = identities
         self._audit = audit

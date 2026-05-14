@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from ..authorisation.roles import OrganisationRole, require
+from ..clock import utc_now
 from ..domain.identity import IdentityStatus
 from ..persistence.audit_repository import AuditRepository
 from ..persistence.identity_repository import IdentityRepository
@@ -22,7 +23,7 @@ class StatsService:
         self,
         identities: IdentityRepository,
         audit: AuditRepository,
-        clock: Callable[[], datetime] = datetime.utcnow,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._identities = identities
         self._audit = audit

@@ -6,6 +6,7 @@ from datetime import date, datetime, time
 from typing import Any
 
 from ..authorisation.roles import OrganisationRole, require
+from ..clock import utc_now
 from ..domain.audit import AuditAction
 from ..domain.exceptions import AuthorisationError, ValidationError
 from ..domain.identity import IdentityStatus
@@ -52,7 +53,7 @@ class VerificationService:
         self,
         identities: IdentityRepository,
         audit: AuditService,
-        clock: Callable[[], datetime] = datetime.utcnow,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._identities = identities
         self._audit = audit

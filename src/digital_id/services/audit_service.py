@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from ..authorisation.roles import OrganisationRole
+from ..clock import utc_now
 from ..domain.audit import AuditAction, AuditEvent
 from ..persistence.audit_repository import AuditRepository
 
@@ -13,7 +14,7 @@ class AuditService:
     def __init__(
         self,
         events: AuditRepository,
-        clock: Callable[[], datetime] = datetime.utcnow,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._events = events
         self._clock = clock
