@@ -77,8 +77,8 @@ class Shell:
         except DigitalIdError as err:
             self._write(f"rejected: {err}")
         except ValueError as err:
-            # raised by command argument parsing and by date.fromisoformat
-            self._write(f"rejected: {err}")
+            # usage and parsing errors carry their own prefix, so we print as-is
+            self._write(str(err))
         return True
 
     def run(self) -> None:

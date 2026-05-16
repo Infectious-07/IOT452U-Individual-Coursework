@@ -4,6 +4,7 @@ from collections.abc import Callable
 from datetime import date
 
 from ..authorisation.roles import OrganisationRole
+from ..domain.exceptions import ValidationError
 from ..services.verification import VerificationService
 from .base import Portal
 
@@ -21,8 +22,11 @@ def build_tax_portal(
 
     def verify(args: list[str]) -> None:
         _require_args(args, 3, "verify <id> <YYYY-MM-DD start> <YYYY-MM-DD end>")
-        start = date.fromisoformat(args[1])
-        end = date.fromisoformat(args[2])
+        try:
+            start = date.fromisoformat(args[1])
+            end = date.fromisoformat(args[2])
+        except ValueError as exc:
+            raise ValidationError("period", "expected ISO dates YYYY-MM-DD") from exc
         response = verification.verify_for_tax(role, args[0], start, end)
         writer(
             f"id={response.identity_id} exists={response.exists} "

@@ -116,6 +116,31 @@ def test_unknown_command_is_reported(wired) -> None:
     assert "unknown command: nope" in output
 
 
+def test_usage_message_prints_plainly(wired) -> None:
+    portals, writer = wired
+    shell = Shell(
+        portals,
+        reader=_scripted_reader(["1", "create ID-001 Ada", "quit"]),
+        writer=writer,
+    )
+    shell.run()
+    output = writer.getvalue()
+    assert "usage: create <id> <full name> <dob>" in output
+    assert "rejected: usage:" not in output
+
+
+def test_domain_error_prints_with_rejected_prefix(wired) -> None:
+    portals, writer = wired
+    shell = Shell(
+        portals,
+        reader=_scripted_reader(["1", "show ID-999", "quit"]),
+        writer=writer,
+    )
+    shell.run()
+    output = writer.getvalue()
+    assert "rejected: identity not found: ID-999" in output
+
+
 def test_bank_cannot_run_lifecycle_commands(wired) -> None:
     portals, writer = wired
     shell = Shell(
