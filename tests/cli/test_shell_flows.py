@@ -135,6 +135,52 @@ def test_tax_portal_period_verification(wired) -> None:
     assert "suspended_in_period=False" in output
 
 
+def test_central_full_lifecycle_commands(wired, tmp_path: Path) -> None:
+    portals, writer = wired
+    export_dir = tmp_path / "out"
+    shell = Shell(
+        portals,
+        reader=_scripted_reader(
+            [
+                "1",
+                "create ID-001 \"Ada Lovelace\" 1990-05-01",
+                "update ID-001 \"Ada L.\"",
+                "suspend ID-001",
+                "reactivate ID-001",
+                "history ID-001",
+                "list",
+                f"export {export_dir.as_posix()}",
+                "revoke ID-001",
+                "quit",
+            ]
+        ),
+        writer=writer,
+    )
+    shell.run()
+    output = writer.getvalue()
+    assert "name=Ada L." in output
+    assert "CREATE" in output
+    assert "SUSPEND" in output
+    assert "REACTIVATE" in output
+    assert "exported identities=1 audit_events=" in output
+    assert "status=REVOKED" in output
+    assert (export_dir / "identities.csv").exists()
+    assert (export_dir / "audit.csv").exists()
+
+
+def test_central_help_lists_registered_commands(wired) -> None:
+    portals, writer = wired
+    shell = Shell(
+        portals,
+        reader=_scripted_reader(["1", "help", "quit"]),
+        writer=writer,
+    )
+    shell.run()
+    output = writer.getvalue()
+    for command in ("create", "update", "suspend", "revoke", "reactivate", "stats"):
+        assert command in output
+
+
 def test_welfare_lookup_portal(wired) -> None:
     portals, writer = wired
     shell = Shell(
