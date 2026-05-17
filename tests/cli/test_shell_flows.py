@@ -9,7 +9,12 @@ from digital_id.persistence.audit_repository import AuditRepository
 from digital_id.persistence.database import bootstrap, connect
 from digital_id.persistence.identity_repository import IdentityRepository
 from digital_id.portals.central_authority import build_central_portal
-from digital_id.portals.consumer import build_dvla_portal, build_validity_portal
+from digital_id.portals.consumer import (
+    build_dvla_portal,
+    build_lookup_portal,
+    build_tax_portal,
+    build_validity_portal,
+)
 from digital_id.services.audit_service import AuditService
 from digital_id.services.export_service import ExportService
 from digital_id.services.identity_service import IdentityService
@@ -49,9 +54,13 @@ def wired(tmp_path: Path):
         OrganisationRole.CENTRAL_AUTHORITY: build_central_portal(
             identity_service, audit, exports, stats, to_writer
         ),
+        OrganisationRole.TAX: build_tax_portal(verification, to_writer),
         OrganisationRole.DVLA: build_dvla_portal(verification, to_writer),
         OrganisationRole.BANK: build_validity_portal(
             OrganisationRole.BANK, "Bank", verification, to_writer
+        ),
+        OrganisationRole.WELFARE: build_lookup_portal(
+            OrganisationRole.WELFARE, "Welfare", verification, to_writer
         ),
     }
     return portals, writer
@@ -91,7 +100,7 @@ def test_dvla_flow_after_central_creates(wired) -> None:
                 "1",
                 "create ID-001 \"Ada Lovelace\" 1990-05-01",
                 "portal",
-                "2",
+                "3",
                 "verify ID-001",
                 "quit",
             ]
@@ -102,6 +111,50 @@ def test_dvla_flow_after_central_creates(wired) -> None:
     output = writer.getvalue()
     assert "active_now=True" in output
     assert "restricted_now=False" in output
+
+
+def test_tax_portal_period_verification(wired) -> None:
+    portals, writer = wired
+    shell = Shell(
+        portals,
+        reader=_scripted_reader(
+            [
+                "1",
+                "create ID-001 \"Ada Lovelace\" 1990-05-01",
+                "portal",
+                "2",
+                "verify ID-001 2026-01-01 2026-12-31",
+                "quit",
+            ]
+        ),
+        writer=writer,
+    )
+    shell.run()
+    output = writer.getvalue()
+    assert "active_now=True" in output
+    assert "suspended_in_period=False" in output
+
+
+def test_welfare_lookup_portal(wired) -> None:
+    portals, writer = wired
+    shell = Shell(
+        portals,
+        reader=_scripted_reader(
+            [
+                "1",
+                "create ID-001 \"Ada Lovelace\" 1990-05-01",
+                "portal",
+                "5",
+                "verify ID-001",
+                "quit",
+            ]
+        ),
+        writer=writer,
+    )
+    shell.run()
+    output = writer.getvalue()
+    assert "valid_now=True" in output
+    assert "name=Ada Lovelace" in output
 
 
 def test_unknown_command_is_reported(wired) -> None:
@@ -147,7 +200,7 @@ def test_bank_cannot_run_lifecycle_commands(wired) -> None:
         portals,
         reader=_scripted_reader(
             [
-                "3",
+                "4",
                 "verify ID-999",
                 "quit",
             ]
