@@ -86,11 +86,12 @@ class MenuShell:
                 # the user cancelled; abort the command without writing anything
                 return
             args[argument.key] = value
-        if command.confirmation is not None:
-            if not self._prompter.confirm(command.confirmation, default=False):
-                self._screen.warning("Cancelled.")
-                self._after_action()
-                return
+        if command.confirmation is not None and not self._prompter.confirm(
+            command.confirmation, default=False
+        ):
+            self._screen.warning("Cancelled.")
+            self._after_action()
+            return
         try:
             result = command.handler(args)
         except DigitalIdError as err:

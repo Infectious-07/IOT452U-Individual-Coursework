@@ -93,7 +93,7 @@ def tax_response_table(response) -> Table:
     table.add_row("active now", "yes" if response.active_now else "no")
     table.add_row(
         "suspended in period",
-        f"[bold red]yes[/]" if response.suspended_in_period else "no",
+        "[bold red]yes[/]" if response.suspended_in_period else "no",
     )
     table.add_row(
         "period",
