@@ -1,52 +1,48 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..authorisation.roles import OrganisationRole
 
-# a portal command is a callable that receives the parsed args and prints output
-Handler = Callable[[list[str]], None]
+CommandResult = Any
+CommandHandler = Callable[[Mapping[str, str]], CommandResult]
+
+
+@dataclass(frozen=True)
+class Argument:
+    key: str
+    label: str
+    default: str | None = None
 
 
 @dataclass(frozen=True)
 class Command:
-    name: str
-    summary: str
-    handler: Handler
+    key: str
+    label: str
+    description: str
+    arguments: Sequence[Argument]
+    handler: CommandHandler
+    confirmation: str | None = None
 
 
+@dataclass
 class Portal:
     role: OrganisationRole
     title: str
+    description: str = ""
+    _commands: list[Command] = field(default_factory=list)
 
-    def __init__(self, role: OrganisationRole, title: str) -> None:
-        self.role = role
-        self.title = title
-        self._commands: dict[str, Command] = {}
+    def add(self, command: Command) -> None:
+        self._commands.append(command)
 
-    def register(self, name: str, summary: str, handler: Handler) -> None:
-        self._commands[name] = Command(name=name, summary=summary, handler=handler)
+    @property
+    def commands(self) -> Sequence[Command]:
+        return tuple(self._commands)
 
-    def commands(self) -> Mapping[str, Command]:
-        return self._commands
-
-    def dispatch(self, name: str, args: list[str]) -> None:
-        command = self._commands.get(name)
-        if command is None:
-            raise KeyError(name)
-        command.handler(args)
-
-    def help_lines(self) -> list[str]:
-        rows: list[str] = [f"{self.title} ({self.role.value})", ""]
-        for command in self._commands.values():
-            rows.append(f"  {command.name:<14} {command.summary}")
-        rows.append("  help           show this list")
-        rows.append("  portal         go back to portal selection")
-        rows.append("  quit           leave the shell")
-        return rows
-
-
-def render_kv(items: Mapping[str, Any]) -> str:
-    return ", ".join(f"{key}={value}" for key, value in items.items())
+    def find(self, key: str) -> Command | None:
+        for command in self._commands:
+            if command.key == key:
+                return command
+        return None

@@ -22,33 +22,29 @@ from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService
 from ..services.stats_service import StatsService
 from ..services.verification import VerificationService
-from .shell import Shell
+from .shell import MenuShell
 
 
-def _build_portals(
+def build_portals(
     identity_service: IdentityService,
     audit_service: AuditService,
     verification: VerificationService,
     export_service: ExportService,
     stats_service: StatsService,
 ) -> Mapping[OrganisationRole, Portal]:
-    writer = print
     return {
         OrganisationRole.CENTRAL_AUTHORITY: build_central_portal(
-            identity_service, audit_service, export_service, stats_service, writer
+            identity_service, audit_service, export_service, stats_service
         ),
-        OrganisationRole.TAX: build_tax_portal(verification, writer),
-        OrganisationRole.DVLA: build_dvla_portal(verification, writer),
-        OrganisationRole.BANK: build_bank_portal(verification, writer),
-        OrganisationRole.EMPLOYER: build_employer_portal(verification, writer),
+        OrganisationRole.TAX: build_tax_portal(verification),
+        OrganisationRole.DVLA: build_dvla_portal(verification),
+        OrganisationRole.BANK: build_bank_portal(verification),
+        OrganisationRole.EMPLOYER: build_employer_portal(verification),
         OrganisationRole.WELFARE: build_lookup_portal(
-            OrganisationRole.WELFARE, "Welfare Services", verification, writer
+            OrganisationRole.WELFARE, "Welfare Services", verification
         ),
         OrganisationRole.LOCAL_AUTHORITY: build_lookup_portal(
-            OrganisationRole.LOCAL_AUTHORITY,
-            "Local Authority",
-            verification,
-            writer,
+            OrganisationRole.LOCAL_AUTHORITY, "Local Authority", verification
         ),
     }
 
@@ -64,5 +60,5 @@ def run(settings: Settings | None = None) -> None:
     verification = VerificationService(identities, audit)
     exports = ExportService(identities, audit_repo)
     stats = StatsService(identities, audit_repo)
-    portals = _build_portals(identity_service, audit, verification, exports, stats)
-    Shell(portals).run()
+    portals = build_portals(identity_service, audit, verification, exports, stats)
+    MenuShell(portals).run()

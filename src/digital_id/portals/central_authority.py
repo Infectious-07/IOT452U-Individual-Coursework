@@ -1,23 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Mapping
 from pathlib import Path
 
 from ..authorisation.roles import OrganisationRole
-from ..domain.identity import DigitalID
+from ..cli.render import (
+    audit_table,
+    identity_list_table,
+    identity_panel,
+    stats_table,
+)
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService, NewIdentity
 from ..services.stats_service import StatsService
-from .base import Portal
+from .base import Argument, Command, Portal
 
-
-def _format_identity(identity: DigitalID) -> str:
-    return (
-        f"id={identity.id} name={identity.name} dob={identity.dob.isoformat()} "
-        f"nationality={identity.nationality} status={identity.status.value} "
-        f"updated_at={identity.updated_at.isoformat()}"
-    )
+ROLE = OrganisationRole.CENTRAL_AUTHORITY
 
 
 def build_central_portal(
@@ -25,127 +24,233 @@ def build_central_portal(
     audit_service: AuditService,
     export_service: ExportService,
     stats_service: StatsService,
-    writer: Callable[[str], None],
 ) -> Portal:
-    portal = Portal(OrganisationRole.CENTRAL_AUTHORITY, "Central Authority")
-    role = OrganisationRole.CENTRAL_AUTHORITY
+    portal = Portal(
+        ROLE,
+        "Central Authority",
+        "Create, update and manage Digital ID records.",
+    )
 
-    def _require_args(args: list[str], expected: int, usage: str) -> None:
-        if len(args) != expected:
-            raise ValueError(f"usage: {usage}")
-
-    def create(args: list[str]) -> None:
-        _require_args(args, 5, "create <id> <full name> <dob> <nationality> <address>")
+    def create(args: Mapping[str, str]):
         payload = NewIdentity(
-            identity_id=args[0],
-            name=args[1],
-            dob=args[2],
-            nationality=args[3],
-            address=args[4],
+            identity_id=args["identity_id"],
+            name=args["name"],
+            dob=args["dob"],
+            nationality=args["nationality"],
+            address=args["address"],
         )
-        identity = identity_service.create(role, payload)
-        writer(_format_identity(identity))
+        return identity_panel(identity_service.create(ROLE, payload))
 
-    def update_name(args: list[str]) -> None:
-        _require_args(args, 2, "update-name <id> <new name>")
-        identity = identity_service.update_name(role, args[0], args[1])
-        writer(_format_identity(identity))
+    def update_name(args: Mapping[str, str]):
+        return identity_panel(
+            identity_service.update_name(ROLE, args["identity_id"], args["name"])
+        )
 
-    def update_address(args: list[str]) -> None:
-        _require_args(args, 2, "update-address <id> <new address>")
-        identity = identity_service.update_address(role, args[0], args[1])
-        writer(_format_identity(identity))
+    def update_address(args: Mapping[str, str]):
+        return identity_panel(
+            identity_service.update_address(ROLE, args["identity_id"], args["address"])
+        )
 
-    def update_tax(args: list[str]) -> None:
-        _require_args(args, 3, "update-tax <id> <reference or ->  <band or ->")
-        ref = None if args[1] == "-" else args[1]
-        band = None if args[2] == "-" else args[2]
-        identity = identity_service.update_tax_details(role, args[0], ref, band)
-        writer(_format_identity(identity))
+    def update_tax(args: Mapping[str, str]):
+        ref = args["tax_reference"] or None
+        band = args["tax_band"] or None
+        return identity_panel(
+            identity_service.update_tax_details(ROLE, args["identity_id"], ref, band)
+        )
 
-    def update_driving(args: list[str]) -> None:
-        _require_args(args, 3, "update-driving <id> <entitlements csv or ->  <restrictions csv or ->")
-        ents = "" if args[1] == "-" else args[1]
-        rests = "" if args[2] == "-" else args[2]
-        identity = identity_service.update_driving(role, args[0], ents, rests)
-        writer(_format_identity(identity))
+    def update_driving(args: Mapping[str, str]):
+        return identity_panel(
+            identity_service.update_driving(
+                ROLE,
+                args["identity_id"],
+                args["entitlements"],
+                args["restrictions"],
+            )
+        )
 
-    def update_eligibility(args: list[str]) -> None:
-        _require_args(args, 3, "update-eligibility <id> <right_to_work yes|no> <residency>")
-        right = args[1].lower() in {"yes", "true", "1"}
-        identity = identity_service.update_eligibility(role, args[0], right, args[2])
-        writer(_format_identity(identity))
+    def update_eligibility(args: Mapping[str, str]):
+        right = args["right_to_work"].strip().lower() in {"yes", "y", "true", "1"}
+        return identity_panel(
+            identity_service.update_eligibility(
+                ROLE,
+                args["identity_id"],
+                right,
+                args["residency"],
+            )
+        )
 
-    def suspend(args: list[str]) -> None:
-        _require_args(args, 1, "suspend <id>")
-        identity = identity_service.suspend(role, args[0])
-        writer(_format_identity(identity))
+    def suspend(args: Mapping[str, str]):
+        return identity_panel(identity_service.suspend(ROLE, args["identity_id"]))
 
-    def revoke(args: list[str]) -> None:
-        _require_args(args, 1, "revoke <id>")
-        identity = identity_service.revoke(role, args[0])
-        writer(_format_identity(identity))
+    def revoke(args: Mapping[str, str]):
+        return identity_panel(identity_service.revoke(ROLE, args["identity_id"]))
 
-    def reactivate(args: list[str]) -> None:
-        _require_args(args, 1, "reactivate <id>")
-        identity = identity_service.reactivate(role, args[0])
-        writer(_format_identity(identity))
+    def reactivate(args: Mapping[str, str]):
+        return identity_panel(identity_service.reactivate(ROLE, args["identity_id"]))
 
-    def show(args: list[str]) -> None:
-        _require_args(args, 1, "show <id>")
-        identity = identity_service.get(args[0])
-        writer(_format_identity(identity))
+    def show(args: Mapping[str, str]):
+        return identity_panel(identity_service.get(args["identity_id"]))
 
-    def list_all(args: list[str]) -> None:
-        _require_args(args, 0, "list")
+    def list_all(_args: Mapping[str, str]):
         records = identity_service.list_all()
         if not records:
-            writer("no identities")
-            return
-        for identity in records:
-            writer(_format_identity(identity))
+            return "[yellow]no identities yet[/]"
+        return identity_list_table(records)
 
-    def history(args: list[str]) -> None:
-        _require_args(args, 1, "history <id>")
-        events = audit_service.history_for(args[0])
+    def history(args: Mapping[str, str]):
+        events = audit_service.history_for(args["identity_id"])
         if not events:
-            writer("no events recorded")
-            return
-        for event in events:
-            writer(
-                f"{event.occurred_at.isoformat()} {event.actor_role} "
-                f"{event.action.value} {event.payload}"
-            )
+            return "[yellow]no events recorded[/]"
+        return audit_table(events, title=f"History  {args['identity_id']}")
 
-    def export(args: list[str]) -> None:
-        _require_args(args, 1, "export <directory>")
-        directory = Path(args[0])
+    def export(args: Mapping[str, str]):
+        directory = Path(args["directory"])
         identities_count = export_service.export_identities(
-            role, directory / "identities.csv"
+            ROLE, directory / "identities.csv"
         )
-        audit_count = export_service.export_audit(role, directory / "audit.csv")
-        writer(f"exported identities={identities_count} audit_events={audit_count}")
+        audit_count = export_service.export_audit(ROLE, directory / "audit.csv")
+        return (
+            f"[bold green]Exported[/] {identities_count} identity rows and "
+            f"{audit_count} audit rows to {directory}"
+        )
 
-    def stats(args: list[str]) -> None:
-        _require_args(args, 0, "stats")
-        snapshot = stats_service.snapshot(role)
-        writer(f"total={snapshot.total}")
-        for status_name, count in snapshot.by_status.items():
-            writer(f"  {status_name}={count}")
-        writer(f"events_last_7_days={snapshot.events_last_7_days}")
+    def stats(_args: Mapping[str, str]):
+        return stats_table(stats_service.snapshot(ROLE))
 
-    portal.register("create", "create a new Digital ID", create)
-    portal.register("update-name", "change the name on a Digital ID", update_name)
-    portal.register("update-address", "change the registered address", update_address)
-    portal.register("update-tax", "set tax reference and band", update_tax)
-    portal.register("update-driving", "set driving entitlements and restrictions", update_driving)
-    portal.register("update-eligibility", "set right to work and residency", update_eligibility)
-    portal.register("suspend", "set a Digital ID to suspended", suspend)
-    portal.register("revoke", "revoke a Digital ID permanently", revoke)
-    portal.register("reactivate", "reactivate a suspended Digital ID", reactivate)
-    portal.register("show", "show the current record for an id", show)
-    portal.register("list", "list every Digital ID record", list_all)
-    portal.register("history", "list audit events for an id", history)
-    portal.register("export", "write identities and audit CSVs to a directory", export)
-    portal.register("stats", "show counts by status and recent activity", stats)
+    _id = Argument("identity_id", "Identity ID")
+
+    portal.add(
+        Command(
+            "create",
+            "Create a Digital ID",
+            "Issue a new Digital ID with the mandatory base attributes",
+            (
+                Argument("identity_id", "Identity ID"),
+                Argument("name", "Full name"),
+                Argument("dob", "Date of birth (YYYY-MM-DD)"),
+                Argument("nationality", "Nationality (ISO 3166 alpha-2)", default="GB"),
+                Argument("address", "Address"),
+            ),
+            create,
+        )
+    )
+    portal.add(
+        Command(
+            "update_name",
+            "Update name",
+            "Change the name on an existing record",
+            (_id, Argument("name", "New name")),
+            update_name,
+        )
+    )
+    portal.add(
+        Command(
+            "update_address",
+            "Update address",
+            "Change the registered address",
+            (_id, Argument("address", "New address")),
+            update_address,
+        )
+    )
+    portal.add(
+        Command(
+            "update_tax",
+            "Update tax details",
+            "Set or clear the tax reference and band",
+            (
+                _id,
+                Argument("tax_reference", "Tax reference (blank to clear)", default=""),
+                Argument("tax_band", "Tax band (BASIC, HIGHER, ADDITIONAL, EXEMPT)", default=""),
+            ),
+            update_tax,
+        )
+    )
+    portal.add(
+        Command(
+            "update_driving",
+            "Update driving entitlements",
+            "Set the driving entitlement and restriction sets",
+            (
+                _id,
+                Argument(
+                    "entitlements",
+                    "Entitlement codes, comma separated (A, B, C, C1, D, D1)",
+                    default="",
+                ),
+                Argument(
+                    "restrictions",
+                    "Restriction codes, comma separated (GLASSES, AUTOMATIC_ONLY, DAYTIME_ONLY, HEARING_AID)",
+                    default="",
+                ),
+            ),
+            update_driving,
+        )
+    )
+    portal.add(
+        Command(
+            "update_eligibility",
+            "Update right to work and residency",
+            "Set the right to work flag and the residency status",
+            (
+                _id,
+                Argument("right_to_work", "Right to work (yes/no)", default="no"),
+                Argument(
+                    "residency",
+                    "Residency (CITIZEN, RESIDENT, TEMPORARY, NONE)",
+                    default="NONE",
+                ),
+            ),
+            update_eligibility,
+        )
+    )
+    portal.add(
+        Command(
+            "suspend",
+            "Suspend an ID",
+            "Temporarily suspend a Digital ID",
+            (_id,),
+            suspend,
+            confirmation="Suspending a Digital ID blocks all consumer checks. Continue?",
+        )
+    )
+    portal.add(
+        Command(
+            "revoke",
+            "Revoke an ID",
+            "Permanently revoke a Digital ID; this cannot be undone",
+            (_id,),
+            revoke,
+            confirmation="Revoking a Digital ID is permanent and cannot be undone. Continue?",
+        )
+    )
+    portal.add(
+        Command(
+            "reactivate",
+            "Reactivate an ID",
+            "Move a suspended ID back to active",
+            (_id,),
+            reactivate,
+        )
+    )
+    portal.add(Command("show", "Show a Digital ID", "Display the current record", (_id,), show))
+    portal.add(Command("list", "List Digital IDs", "Show every record in the system", (), list_all))
+    portal.add(
+        Command(
+            "history",
+            "Show history",
+            "List the audit events recorded for an ID",
+            (_id,),
+            history,
+        )
+    )
+    portal.add(
+        Command(
+            "export",
+            "Export to CSV",
+            "Write identities and audit events to two CSV files",
+            (Argument("directory", "Output directory"),),
+            export,
+        )
+    )
+    portal.add(Command("stats", "Show statistics", "Counts by status and recent activity", (), stats))
     return portal

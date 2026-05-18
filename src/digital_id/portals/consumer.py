@@ -1,120 +1,132 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Mapping
 from datetime import date
 
 from ..authorisation.roles import OrganisationRole
+from ..cli.render import (
+    dvla_response_table,
+    employer_response_table,
+    lookup_response_table,
+    tax_response_table,
+    validity_response_table,
+)
 from ..domain.exceptions import ValidationError
 from ..services.verification import VerificationService
-from .base import Portal
+from .base import Argument, Command, Portal
 
 
-def _require_args(args: list[str], expected: int, usage: str) -> None:
-    if len(args) != expected:
-        raise ValueError(f"usage: {usage}")
+def _identity_arg() -> Argument:
+    return Argument("identity_id", "Identity ID")
 
 
-def _codes_summary(codes) -> str:
-    items = sorted(item.value for item in codes)
-    return ",".join(items) if items else "-"
+def build_tax_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.TAX,
+        "Tax Authority",
+        "Confirm an identity and check for any suspension within a reporting period.",
+    )
 
-
-def build_tax_portal(
-    verification: VerificationService, writer: Callable[[str], None]
-) -> Portal:
-    portal = Portal(OrganisationRole.TAX, "Tax Authority")
-    role = OrganisationRole.TAX
-
-    def verify(args: list[str]) -> None:
-        _require_args(args, 3, "verify <id> <YYYY-MM-DD start> <YYYY-MM-DD end>")
+    def verify(args: Mapping[str, str]):
         try:
-            start = date.fromisoformat(args[1])
-            end = date.fromisoformat(args[2])
+            start = date.fromisoformat(args["period_start"])
+            end = date.fromisoformat(args["period_end"])
         except ValueError as exc:
             raise ValidationError("period", "expected ISO dates YYYY-MM-DD") from exc
-        response = verification.verify_for_tax(role, args[0], start, end)
-        band_value = response.tax_band.value if response.tax_band else "-"
-        writer(
-            f"id={response.identity_id} exists={response.exists} "
-            f"active_now={response.active_now} "
-            f"suspended_in_period={response.suspended_in_period} "
-            f"period={response.period_start.isoformat()}..{response.period_end.isoformat()} "
-            f"tax_reference={response.tax_reference or '-'} tax_band={band_value}"
+        response = verification.verify_for_tax(
+            OrganisationRole.TAX, args["identity_id"], start, end
         )
+        return tax_response_table(response)
 
-    portal.register("verify", "check an id for a reporting period", verify)
+    portal.add(
+        Command(
+            "verify",
+            "Verify for a reporting period",
+            "Check whether an ID exists, is currently active and was suspended in the period.",
+            (
+                _identity_arg(),
+                Argument("period_start", "Period start (YYYY-MM-DD)"),
+                Argument("period_end", "Period end (YYYY-MM-DD)"),
+            ),
+            verify,
+        )
+    )
     return portal
 
 
-def build_dvla_portal(
-    verification: VerificationService, writer: Callable[[str], None]
-) -> Portal:
-    portal = Portal(OrganisationRole.DVLA, "Driving Licence Authority")
-    role = OrganisationRole.DVLA
+def build_dvla_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.DVLA,
+        "Driving Licence Authority",
+        "Check active status, restrictions and entitlements for licensing.",
+    )
 
-    def verify(args: list[str]) -> None:
-        _require_args(args, 1, "verify <id>")
-        response = verification.verify_for_dvla(role, args[0])
-        writer(
-            f"id={response.identity_id} exists={response.exists} "
-            f"active_now={response.active_now} restricted_now={response.restricted_now} "
-            f"entitlements={_codes_summary(response.entitlements)} "
-            f"restrictions={_codes_summary(response.restrictions)}"
+    def verify(args: Mapping[str, str]):
+        return dvla_response_table(
+            verification.verify_for_dvla(OrganisationRole.DVLA, args["identity_id"])
         )
 
-    portal.register("verify", "check whether an id is active and unrestricted", verify)
+    portal.add(
+        Command(
+            "verify",
+            "Verify a Digital ID for licensing",
+            "Returns active status, restriction flag and entitlements.",
+            (_identity_arg(),),
+            verify,
+        )
+    )
     return portal
 
 
-def build_bank_portal(
-    verification: VerificationService, writer: Callable[[str], None]
-) -> Portal:
-    portal = Portal(OrganisationRole.BANK, "Bank")
-    role = OrganisationRole.BANK
+def build_bank_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.BANK,
+        "Bank",
+        "Lightweight validity check for account operations.",
+    )
 
-    def verify(args: list[str]) -> None:
-        _require_args(args, 1, "verify <id>")
-        response = verification.verify_for_bank(role, args[0])
-        writer(f"id={response.identity_id} valid_now={response.valid_now}")
+    def verify(args: Mapping[str, str]):
+        return validity_response_table(
+            verification.verify_for_bank(OrganisationRole.BANK, args["identity_id"])
+        )
 
-    portal.register("verify", "check whether an id is valid right now", verify)
+    portal.add(
+        Command("verify", "Verify validity", "Yes or no on validity right now.", (_identity_arg(),), verify)
+    )
     return portal
 
 
-def build_employer_portal(
-    verification: VerificationService, writer: Callable[[str], None]
-) -> Portal:
-    portal = Portal(OrganisationRole.EMPLOYER, "Employer")
-    role = OrganisationRole.EMPLOYER
+def build_employer_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.EMPLOYER,
+        "Employer",
+        "Validity plus right to work check.",
+    )
 
-    def verify(args: list[str]) -> None:
-        _require_args(args, 1, "verify <id>")
-        response = verification.verify_for_employer(role, args[0])
-        writer(
-            f"id={response.identity_id} valid_now={response.valid_now} "
-            f"right_to_work={response.right_to_work}"
+    def verify(args: Mapping[str, str]):
+        return employer_response_table(
+            verification.verify_for_employer(OrganisationRole.EMPLOYER, args["identity_id"])
         )
 
-    portal.register("verify", "check validity and right to work", verify)
+    portal.add(
+        Command(
+            "verify",
+            "Verify validity and right to work",
+            "Returns valid_now and right_to_work for an ID.",
+            (_identity_arg(),),
+            verify,
+        )
+    )
     return portal
 
 
-def build_lookup_portal(
-    role: OrganisationRole,
-    title: str,
-    verification: VerificationService,
-    writer: Callable[[str], None],
-) -> Portal:
-    portal = Portal(role, title)
+def build_lookup_portal(role: OrganisationRole, title: str, verification: VerificationService) -> Portal:
+    portal = Portal(role, title, "Validity, name and residency status.")
 
-    def verify(args: list[str]) -> None:
-        _require_args(args, 1, "verify <id>")
-        response = verification.verify_lookup(role, args[0])
-        residency = response.residency_status.value if response.residency_status else "-"
-        writer(
-            f"id={response.identity_id} valid_now={response.valid_now} "
-            f"name={response.name or '-'} residency_status={residency}"
+    def verify(args: Mapping[str, str]):
+        return lookup_response_table(
+            verification.verify_lookup(role, args["identity_id"])
         )
 
-    portal.register("verify", "check validity, name and residency", verify)
+    portal.add(Command("verify", "Verify and look up", "Returns validity, name and residency.", (_identity_arg(),), verify))
     return portal
