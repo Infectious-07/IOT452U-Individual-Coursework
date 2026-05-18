@@ -17,7 +17,6 @@ from digital_id.persistence.database import bootstrap, connect
 from digital_id.persistence.identity_repository import IdentityRepository
 from tests.conftest import make_sample_identity
 
-
 # identity repository
 
 @pytest.fixture

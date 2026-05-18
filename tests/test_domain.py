@@ -34,7 +34,6 @@ from digital_id.domain.validators import (
 )
 from tests.conftest import make_sample_identity
 
-
 # entity
 
 @pytest.fixture
