@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, time
 from typing import Any
 
@@ -9,14 +9,21 @@ from ..authorisation.roles import OrganisationRole, require
 from ..clock import utc_now
 from ..domain.audit import AuditAction
 from ..domain.exceptions import AuthorisationError, ValidationError
-from ..domain.identity import IdentityStatus
+from ..domain.identity import (
+    DigitalID,
+    DrivingEntitlement,
+    DrivingRestriction,
+    IdentityStatus,
+    ResidencyStatus,
+    TaxBand,
+)
 from ..domain.validators import validate_identity_id
 from ..persistence.identity_repository import IdentityRepository
 from .audit_service import AuditService
 
 
-# Each consumer role gets a tailored response shape so portals do not
-# leak attributes that are not relevant to their domain.
+# Each consumer role gets a tailored response shape that exposes only the
+# attributes the role is entitled to see.
 @dataclass(frozen=True)
 class ValidityResponse:
     identity_id: str
@@ -24,10 +31,18 @@ class ValidityResponse:
 
 
 @dataclass(frozen=True)
+class EmployerResponse:
+    identity_id: str
+    valid_now: bool
+    right_to_work: bool
+
+
+@dataclass(frozen=True)
 class LookupResponse:
     identity_id: str
     valid_now: bool
     name: str | None
+    residency_status: ResidencyStatus | None
 
 
 @dataclass(frozen=True)
@@ -36,6 +51,8 @@ class DvlaResponse:
     exists: bool
     active_now: bool
     restricted_now: bool
+    entitlements: frozenset[DrivingEntitlement] = field(default_factory=frozenset)
+    restrictions: frozenset[DrivingRestriction] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)
@@ -46,6 +63,8 @@ class TaxResponse:
     suspended_in_period: bool
     period_start: date
     period_end: date
+    tax_reference: str | None = None
+    tax_band: TaxBand | None = None
 
 
 class VerificationService:
@@ -59,16 +78,11 @@ class VerificationService:
         self._audit = audit
         self._clock = clock
 
-    def _exists_and_status(self, identity_id: str) -> tuple[bool, IdentityStatus | None, str | None]:
+    def _fetch(self, identity_id: str) -> DigitalID | None:
         if not self._identities.exists(identity_id):
-            return False, None, None
-        identity = self._identities.get(identity_id)
-        return True, identity.status, identity.name
+            return None
+        return self._identities.get(identity_id)
 
-    def _ensure_verify_role(self, actor: OrganisationRole) -> None:
-        require(actor, "verify")
-
-    # walks audit events up to a moment to derive the status at that moment
     def _status_at(self, identity_id: str, when: datetime) -> IdentityStatus | None:
         events = self._audit.events_between(datetime.min, when, identity_id)
         status: IdentityStatus | None = None
@@ -83,7 +97,7 @@ class VerificationService:
                 status = IdentityStatus.REVOKED
         return status
 
-    def _record_verify(
+    def _record(
         self,
         actor: OrganisationRole,
         identity_id: str,
@@ -100,18 +114,17 @@ class VerificationService:
     ) -> TaxResponse:
         if actor is not OrganisationRole.TAX:
             raise AuthorisationError(actor.value, "verify_for_tax")
-        self._ensure_verify_role(actor)
+        require(actor, "verify")
         if period_end < period_start:
             raise ValidationError("period", "end is before start")
         clean_id = validate_identity_id(identity_id)
-        exists, status, _ = self._exists_and_status(clean_id)
-        active_now = status is IdentityStatus.ACTIVE
+        identity = self._fetch(clean_id)
+        exists = identity is not None
+        active_now = identity is not None and identity.status is IdentityStatus.ACTIVE
         suspended_in_period = False
-        if exists:
+        if identity is not None:
             window_start = datetime.combine(period_start, time.min)
             window_end = datetime.combine(period_end, time.max)
-            # the identity may have been suspended before the period and only
-            # reactivated within it, so we derive the status at period start
             status_at_start = self._status_at(clean_id, window_start)
             in_period = self._audit.events_between(window_start, window_end, clean_id)
             suspended_in_period = (
@@ -125,8 +138,10 @@ class VerificationService:
             suspended_in_period=suspended_in_period,
             period_start=period_start,
             period_end=period_end,
+            tax_reference=identity.tax_reference if identity else None,
+            tax_band=identity.tax_band if identity else None,
         )
-        self._record_verify(
+        self._record(
             actor,
             clean_id,
             {
@@ -134,8 +149,6 @@ class VerificationService:
                 "exists": exists,
                 "active_now": active_now,
                 "suspended_in_period": suspended_in_period,
-                "period_start": period_start.isoformat(),
-                "period_end": period_end.isoformat(),
             },
         )
         return response
@@ -147,19 +160,21 @@ class VerificationService:
     ) -> DvlaResponse:
         if actor is not OrganisationRole.DVLA:
             raise AuthorisationError(actor.value, "verify_for_dvla")
-        self._ensure_verify_role(actor)
+        require(actor, "verify")
         clean_id = validate_identity_id(identity_id)
-        exists, status, _ = self._exists_and_status(clean_id)
-        active_now = status is IdentityStatus.ACTIVE
-        # a current suspension is the only signal DVLA gets for a restriction
-        restricted_now = status is IdentityStatus.SUSPENDED
+        identity = self._fetch(clean_id)
+        exists = identity is not None
+        active_now = identity is not None and identity.status is IdentityStatus.ACTIVE
+        restricted_now = identity is not None and identity.status is IdentityStatus.SUSPENDED
         response = DvlaResponse(
             identity_id=clean_id,
             exists=exists,
             active_now=active_now,
             restricted_now=restricted_now,
+            entitlements=identity.driving_entitlements if identity else frozenset(),
+            restrictions=identity.driving_restrictions if identity else frozenset(),
         )
-        self._record_verify(
+        self._record(
             actor,
             clean_id,
             {
@@ -171,19 +186,43 @@ class VerificationService:
         )
         return response
 
-    def verify_validity(
+    def verify_for_bank(
         self,
         actor: OrganisationRole,
         identity_id: str,
     ) -> ValidityResponse:
-        if actor not in (OrganisationRole.BANK, OrganisationRole.EMPLOYER):
-            raise AuthorisationError(actor.value, "verify_validity")
-        self._ensure_verify_role(actor)
+        if actor is not OrganisationRole.BANK:
+            raise AuthorisationError(actor.value, "verify_for_bank")
+        require(actor, "verify")
         clean_id = validate_identity_id(identity_id)
-        exists, status, _ = self._exists_and_status(clean_id)
-        valid_now = exists and status is IdentityStatus.ACTIVE
+        identity = self._fetch(clean_id)
+        valid_now = identity is not None and identity.status is IdentityStatus.ACTIVE
         response = ValidityResponse(identity_id=clean_id, valid_now=valid_now)
-        self._record_verify(actor, clean_id, {"kind": "validity", "valid_now": valid_now})
+        self._record(actor, clean_id, {"kind": "bank", "valid_now": valid_now})
+        return response
+
+    def verify_for_employer(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+    ) -> EmployerResponse:
+        if actor is not OrganisationRole.EMPLOYER:
+            raise AuthorisationError(actor.value, "verify_for_employer")
+        require(actor, "verify")
+        clean_id = validate_identity_id(identity_id)
+        identity = self._fetch(clean_id)
+        valid_now = identity is not None and identity.status is IdentityStatus.ACTIVE
+        right_to_work = bool(identity.right_to_work) if valid_now else False
+        response = EmployerResponse(
+            identity_id=clean_id,
+            valid_now=valid_now,
+            right_to_work=right_to_work,
+        )
+        self._record(
+            actor,
+            clean_id,
+            {"kind": "employer", "valid_now": valid_now, "right_to_work": right_to_work},
+        )
         return response
 
     def verify_lookup(
@@ -193,19 +232,15 @@ class VerificationService:
     ) -> LookupResponse:
         if actor not in (OrganisationRole.WELFARE, OrganisationRole.LOCAL_AUTHORITY):
             raise AuthorisationError(actor.value, "verify_lookup")
-        self._ensure_verify_role(actor)
+        require(actor, "verify")
         clean_id = validate_identity_id(identity_id)
-        exists, status, name = self._exists_and_status(clean_id)
-        valid_now = exists and status is IdentityStatus.ACTIVE
-        # only the name is shared back; dob and audit history are withheld
+        identity = self._fetch(clean_id)
+        valid_now = identity is not None and identity.status is IdentityStatus.ACTIVE
         response = LookupResponse(
             identity_id=clean_id,
             valid_now=valid_now,
-            name=name if valid_now else None,
+            name=identity.name if valid_now else None,
+            residency_status=identity.residency_status if valid_now else None,
         )
-        self._record_verify(
-            actor,
-            clean_id,
-            {"kind": "lookup", "valid_now": valid_now},
-        )
+        self._record(actor, clean_id, {"kind": "lookup", "valid_now": valid_now})
         return response
