@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Iterable
 from datetime import datetime
 
 from ..domain.audit import AuditAction, AuditEvent
@@ -37,7 +36,7 @@ class AuditRepository:
                 ),
             )
 
-    def list_for_identity(self, identity_id: str) -> Iterable[AuditEvent]:
+    def list_for_identity(self, identity_id: str) -> list[AuditEvent]:
         rows = self._conn.execute(
             "SELECT * FROM audit_events WHERE identity_id = ? ORDER BY occurred_at, id",
             (identity_id,),
@@ -46,7 +45,7 @@ class AuditRepository:
 
     def list_between(
         self, start: datetime, end: datetime, identity_id: str | None = None
-    ) -> Iterable[AuditEvent]:
+    ) -> list[AuditEvent]:
         if identity_id is None:
             rows = self._conn.execute(
                 "SELECT * FROM audit_events WHERE occurred_at BETWEEN ? AND ?"

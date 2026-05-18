@@ -109,7 +109,3 @@ class MenuShell:
     def _after_action(self) -> None:
         if self._pause:
             self._screen.pause()
-
-
-# alias kept for backwards compatible imports
-Shell = MenuShell
