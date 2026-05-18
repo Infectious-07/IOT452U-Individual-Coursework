@@ -11,10 +11,11 @@ from ..persistence.identity_repository import IdentityRepository
 from ..portals.base import Portal
 from ..portals.central_authority import build_central_portal
 from ..portals.consumer import (
+    build_bank_portal,
     build_dvla_portal,
+    build_employer_portal,
     build_lookup_portal,
     build_tax_portal,
-    build_validity_portal,
 )
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
@@ -38,12 +39,8 @@ def _build_portals(
         ),
         OrganisationRole.TAX: build_tax_portal(verification, writer),
         OrganisationRole.DVLA: build_dvla_portal(verification, writer),
-        OrganisationRole.BANK: build_validity_portal(
-            OrganisationRole.BANK, "Bank", verification, writer
-        ),
-        OrganisationRole.EMPLOYER: build_validity_portal(
-            OrganisationRole.EMPLOYER, "Employer", verification, writer
-        ),
+        OrganisationRole.BANK: build_bank_portal(verification, writer),
+        OrganisationRole.EMPLOYER: build_employer_portal(verification, writer),
         OrganisationRole.WELFARE: build_lookup_portal(
             OrganisationRole.WELFARE, "Welfare Services", verification, writer
         ),

@@ -7,7 +7,7 @@ from ..authorisation.roles import OrganisationRole
 from ..domain.identity import DigitalID
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
-from ..services.identity_service import IdentityService
+from ..services.identity_service import IdentityService, NewIdentity
 from ..services.stats_service import StatsService
 from .base import Portal
 
@@ -15,7 +15,8 @@ from .base import Portal
 def _format_identity(identity: DigitalID) -> str:
     return (
         f"id={identity.id} name={identity.name} dob={identity.dob.isoformat()} "
-        f"status={identity.status.value} updated_at={identity.updated_at.isoformat()}"
+        f"nationality={identity.nationality} status={identity.status.value} "
+        f"updated_at={identity.updated_at.isoformat()}"
     )
 
 
@@ -34,13 +35,45 @@ def build_central_portal(
             raise ValueError(f"usage: {usage}")
 
     def create(args: list[str]) -> None:
-        _require_args(args, 3, "create <id> <full name> <dob>")
-        identity = identity_service.create(role, args[0], args[1], args[2])
+        _require_args(args, 5, "create <id> <full name> <dob> <nationality> <address>")
+        payload = NewIdentity(
+            identity_id=args[0],
+            name=args[1],
+            dob=args[2],
+            nationality=args[3],
+            address=args[4],
+        )
+        identity = identity_service.create(role, payload)
         writer(_format_identity(identity))
 
-    def update(args: list[str]) -> None:
-        _require_args(args, 2, "update <id> <new name>")
+    def update_name(args: list[str]) -> None:
+        _require_args(args, 2, "update-name <id> <new name>")
         identity = identity_service.update_name(role, args[0], args[1])
+        writer(_format_identity(identity))
+
+    def update_address(args: list[str]) -> None:
+        _require_args(args, 2, "update-address <id> <new address>")
+        identity = identity_service.update_address(role, args[0], args[1])
+        writer(_format_identity(identity))
+
+    def update_tax(args: list[str]) -> None:
+        _require_args(args, 3, "update-tax <id> <reference or ->  <band or ->")
+        ref = None if args[1] == "-" else args[1]
+        band = None if args[2] == "-" else args[2]
+        identity = identity_service.update_tax_details(role, args[0], ref, band)
+        writer(_format_identity(identity))
+
+    def update_driving(args: list[str]) -> None:
+        _require_args(args, 3, "update-driving <id> <entitlements csv or ->  <restrictions csv or ->")
+        ents = "" if args[1] == "-" else args[1]
+        rests = "" if args[2] == "-" else args[2]
+        identity = identity_service.update_driving(role, args[0], ents, rests)
+        writer(_format_identity(identity))
+
+    def update_eligibility(args: list[str]) -> None:
+        _require_args(args, 3, "update-eligibility <id> <right_to_work yes|no> <residency>")
+        right = args[1].lower() in {"yes", "true", "1"}
+        identity = identity_service.update_eligibility(role, args[0], right, args[2])
         writer(_format_identity(identity))
 
     def suspend(args: list[str]) -> None:
@@ -62,6 +95,15 @@ def build_central_portal(
         _require_args(args, 1, "show <id>")
         identity = identity_service.get(args[0])
         writer(_format_identity(identity))
+
+    def list_all(args: list[str]) -> None:
+        _require_args(args, 0, "list")
+        records = identity_service.list_all()
+        if not records:
+            writer("no identities")
+            return
+        for identity in records:
+            writer(_format_identity(identity))
 
     def history(args: list[str]) -> None:
         _require_args(args, 1, "history <id>")
@@ -92,17 +134,12 @@ def build_central_portal(
             writer(f"  {status_name}={count}")
         writer(f"events_last_7_days={snapshot.events_last_7_days}")
 
-    def list_all(args: list[str]) -> None:
-        _require_args(args, 0, "list")
-        records = identity_service.list_all()
-        if not records:
-            writer("no identities")
-            return
-        for identity in records:
-            writer(_format_identity(identity))
-
     portal.register("create", "create a new Digital ID", create)
-    portal.register("update", "change the name on an existing Digital ID", update)
+    portal.register("update-name", "change the name on a Digital ID", update_name)
+    portal.register("update-address", "change the registered address", update_address)
+    portal.register("update-tax", "set tax reference and band", update_tax)
+    portal.register("update-driving", "set driving entitlements and restrictions", update_driving)
+    portal.register("update-eligibility", "set right to work and residency", update_eligibility)
     portal.register("suspend", "set a Digital ID to suspended", suspend)
     portal.register("revoke", "revoke a Digital ID permanently", revoke)
     portal.register("reactivate", "reactivate a suspended Digital ID", reactivate)
