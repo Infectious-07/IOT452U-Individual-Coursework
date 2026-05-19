@@ -82,7 +82,7 @@ class Shell:
         return True
 
     def run(self) -> None:
-        self._write("Digital ID console")
+        self._write("Digital ID console; type help inside a portal or quit to exit")
         try:
             while True:
                 if self._active is None:
