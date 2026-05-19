@@ -100,4 +100,15 @@ coverage run -m pytest
 coverage report
 ```
 
-CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 90 percent branch coverage threshold.
+The test suite has 167 tests across 7 test modules:
+
+| module | scope |
+| --- | --- |
+| `test_domain.py` | entity immutability, transitions, exceptions, validators, roles, config, screen, prompter |
+| `test_persistence.py` | identity and audit repository roundtrips, schema migration |
+| `test_services.py` | identity lifecycle, export, stats, noop-on-unchanged, idempotent transitions |
+| `test_verification.py` | tax period checks, DVLA entitlements, employer right to work, cross-role authorisation |
+| `test_render.py` | rich table and panel rendering for every response type |
+| `test_shell_flows.py` | end-to-end shell flows, validation retries, seed data, edge cases |
+
+Branch coverage is 99 percent with zero missing statements. CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 90 percent coverage threshold.

@@ -51,6 +51,8 @@ class TaxResponse:
 
 
 class VerificationService:
+    """Role-scoped identity verification that returns only the fields each consumer needs."""
+
     def __init__(
         self,
         identities: IdentityRepository,

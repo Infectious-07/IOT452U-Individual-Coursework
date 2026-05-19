@@ -78,6 +78,8 @@ _UPDATE_SQL = (
 
 
 class IdentityRepository:
+    """SQLite-backed store for Digital ID records with add, get, update and list operations."""
+
     def __init__(self, connection: sqlite3.Connection) -> None:
         self._conn = connection
 

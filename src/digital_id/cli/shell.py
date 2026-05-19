@@ -21,6 +21,8 @@ GROUP_PREFIX = {
 
 
 class MenuShell:
+    """Interactive REPL that drives portal and command selection via a Prompter."""
+
     def __init__(
         self,
         portals: Mapping[OrganisationRole, Portal],

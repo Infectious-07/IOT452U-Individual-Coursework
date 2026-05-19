@@ -45,6 +45,8 @@ class NewIdentity:
 
 
 class IdentityService:
+    """Manages the full lifecycle of Digital ID records with role-based authorisation."""
+
     def __init__(
         self,
         identities: IdentityRepository,

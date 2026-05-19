@@ -18,6 +18,8 @@ AUDIT_COLUMNS = ("occurred_at", "actor_role", "action", "identity_id", "payload"
 
 
 class ExportService:
+    """Writes identity and audit data to CSV files for the central authority."""
+
     def __init__(
         self,
         identities: IdentityRepository,
@@ -74,6 +76,8 @@ class Snapshot:
 
 
 class StatsService:
+    """Produces status distribution and activity snapshots for the dashboard."""
+
     def __init__(
         self,
         identities: IdentityRepository,

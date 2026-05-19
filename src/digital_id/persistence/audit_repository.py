@@ -18,6 +18,8 @@ def _row_to_event(row: sqlite3.Row) -> AuditEvent:
 
 
 class AuditRepository:
+    """Append-only SQLite store for audit events; no update or delete operations exposed."""
+
     def __init__(self, connection: sqlite3.Connection) -> None:
         self._conn = connection
 

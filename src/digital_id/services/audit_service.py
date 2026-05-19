@@ -11,6 +11,8 @@ from ..persistence.audit_repository import AuditRepository
 
 
 class AuditService:
+    """Append-only audit log that records every lifecycle and verification event."""
+
     def __init__(
         self,
         events: AuditRepository,
