@@ -7,6 +7,7 @@ from pathlib import Path
 from rich.console import Group
 from rich.panel import Panel
 
+from exports import ExportService
 from models import (
     Argument,
     Command,
@@ -22,15 +23,7 @@ from models import (
     validate_postcode,
     validate_tax_reference,
 )
-from services import (
-    AuditService,
-    ExportService,
-    IdentityService,
-    NewIdentity,
-    StatsService,
-    VerificationService,
-)
-from shell import (
+from render import (
     audit_table,
     dvla_response_table,
     employer_response_table,
@@ -39,6 +32,13 @@ from shell import (
     stats_table,
     tax_response_table,
 )
+from services import (
+    AuditService,
+    IdentityService,
+    NewIdentity,
+    StatsService,
+)
+from verification import VerificationService
 
 # --- central authority portal ---
 
@@ -110,7 +110,7 @@ def build_central_portal(
         )
 
     def update_eligibility(args: Mapping[str, str]):
-        right = args["right_to_work"].strip().lower() in {"yes", "y", "true", "1"}
+        right = args["right_to_work"] == "Yes"
         return identity_panel(
             identity_service.update_eligibility(
                 role,

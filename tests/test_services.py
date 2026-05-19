@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from tests.conftest import make_new_identity
 
+from exports import ExportService
 from models import (
     AuthorisationError,
     DuplicateIdentityError,
@@ -14,7 +15,7 @@ from models import (
     TaxBand,
     ValidationError,
 )
-from services import ExportService, StatsService
+from services import StatsService
 
 CENTRAL = OrganisationRole.CENTRAL_AUTHORITY
 CONSUMER = OrganisationRole.EMPLOYER

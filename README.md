@@ -69,7 +69,7 @@ The system has four portals, each with a different level of access.
 | Driving Licence Authority | `DVLA` | Licensing verification: checks active status and restriction flag. Returns driving entitlements and restrictions |
 | Employer | `EMPLOYER` | Employment verification: checks identity is valid and returns right to work status |
 
-Each consumer portal sees only the attributes its organisation needs. When an identity is not active the response hides sensitive fields and returns only the validity flag.
+Each consumer portal sees only the attributes its organisation needs. When an identity is not active the response hides the sensitive attributes (DVLA entitlements and restrictions, Tax reference and band) and the consumer is left with the validity flags it needs to refuse service.
 
 ## Digital ID schema
 
@@ -96,14 +96,18 @@ Each Digital ID carries the following attributes.
 src/
   models.py       identity entity, enums, roles, exceptions, transitions, validators, portal types
   database.py     SQLite schema, connection, identity and audit repositories
-  services.py     identity lifecycle, audit, verification, export and stats services
+  services.py    audit, identity lifecycle and stats services + NewIdentity input
+  verification.py role-scoped verification service + Tax/DVLA/Employer responses
+  exports.py      CSV export service for identities and audit log
   portals.py      per organisation Command definitions wired to service handlers
-  shell.py        prompter protocol, screen, render helpers and the menu shell
-  app.py          portal wiring, sample data seeding and application entry point
+  render.py       rich Table builders for identities, audit, stats and responses
+  shell.py        prompter protocol, screen, menu shell
+  seed.py         sample data and idempotent first-run seeder
+  app.py          composition root: wires services, portals and shell
   config.py       settings loader (reads config.toml with fallback defaults)
 ```
 
-The codebase follows a flat module layout where each module only depends on those above it in the list: `models` has no imports from other project modules, `database` depends only on `models`, `services` depends on both, and `shell`, `portals` plus `app` sit at the top. This keeps the business rules testable without infrastructure and ensures changes to the UI or database do not ripple through unrelated code.
+The codebase follows a layered dependency order. `models` has no project imports. `database` depends only on `models`. `services` depends on both. `verification`, `exports` and `render` consume the data types `services` exposes. `portals` composes services and rendering. `shell` and `seed` sit above that, and `app` is the composition root. The layering keeps business rules testable without infrastructure and stops UI or storage changes from rippling through unrelated code.
 
 Lifecycle operations live in `IdentityService` and only accept the central authority role. Verification logic lives in `VerificationService` and returns a different response type per consumer role. Portals describe their commands as data: each `Command` lists its `Argument` set and an optional confirmation message. The shell drives the prompts and renders results as rich tables.
 
@@ -148,7 +152,7 @@ Verification follows the same path but the service returns a role-scoped respons
 
 **Append-only audit log.** Every lifecycle action and every verification request writes an `AuditEvent`. The audit repository has no update or delete methods, so history cannot be tampered with. Tax verification reuses this log as the source of truth for historical status (see Domain rules).
 
-**Flat module layout with a strict dependency rule.** Seven modules in a single package, each only importing from modules earlier in the dependency chain: `models` (zero project imports), `database`, `services`, `shell`, `portals`, `app`, `config`. This makes the build order obvious, prevents circular imports and keeps the project navigable without nested packages.
+**Layered module layout with a strict dependency rule.** Eleven flat modules in `src/`, each only importing from modules earlier in the dependency chain. This makes the build order obvious, prevents circular imports and keeps the project navigable without nested packages.
 
 **Error hierarchy rooted in DigitalIdError.** Every domain error inherits from one base class. The shell catches `DigitalIdError` to show a user-friendly message, while `ValueError` and unexpected exceptions propagate separately. This keeps error handling predictable without broad except clauses.
 
@@ -184,7 +188,7 @@ coverage run -m pytest
 coverage report
 ```
 
-The test suite has 167 tests across 6 test modules:
+The test suite has 171 tests across 6 test modules:
 
 | module | scope |
 | --- | --- |
@@ -195,20 +199,20 @@ The test suite has 167 tests across 6 test modules:
 | `test_render.py` | rich table and panel rendering for every response type |
 | `test_shell_flows.py` | end-to-end shell flows, validation retries, seed data, edge cases |
 
-Branch coverage is 99 percent with zero missing statements. CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 98 percent coverage threshold.
+Branch coverage is 99 percent with zero missing statements. CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 99 percent coverage threshold to lock in the standard.
 
-## Development methodology
+## Development approach
 
-Work was organised into five sprints tracked on GitHub Issues and Milestones, in a Scrum-style cadence:
+The work progressed through five themes, visible in the commit history:
 
-| sprint | theme |
+| theme | commits |
 | --- | --- |
-| Sprint 1: Foundations | Project skeleton, CI pipeline, domain model |
-| Sprint 2: Persistence | SQLite schema, repositories, lifecycle service |
-| Sprint 3: Authorisation | Role permissions, verification per consumer |
-| Sprint 4: CLI | Portals, shell, render layer, config |
-| Sprint 5: Polish | Test consolidation, schema extensions, CLI refinement |
+| Foundations | project skeleton, CI pipeline, domain model |
+| Persistence | SQLite schema, repositories, lifecycle service |
+| Authorisation | role permissions and verification per consumer |
+| CLI | portals, shell, render layer, configuration |
+| Polish | test consolidation, schema extensions, code-quality refinements |
 
-Each issue carries a label (`feature`, `refactor`, `testing`, `documentation`, `infrastructure`) and a milestone. The commit history shows incremental progress and traceability between issues and code changes.
+The closed GitHub issues with the `feature`, `refactor`, `testing`, `documentation` and `infrastructure` labels capture the same themes as a retrospective task index. They were used to organise the final review rather than to drive the work from the start, so the commit log is the authoritative record of progression.
 
-The project covers the relevant apprenticeship KSBs: K21 (lifecycle stages), K22 (unit testing, programming, architecture), K23 (Scrum-style sprints), K24 (functional, non-functional and security requirements), K26 (selecting and applying tooling), K28 (Git as configuration management), S17, S19, S21 and S22 (recommending, implementing, refining and evaluating an engineering solution).
+The project exercises the apprenticeship KSBs that are most relevant to a single-developer backend: K21 (lifecycle stages), K22 (unit testing, programming, architecture), K24 (functional, non-functional and security requirements), K26 (selecting and applying tooling), K28 (Git as configuration management), and S17, S19, S21, S22 (recommending, implementing, refining and evaluating an engineering solution).

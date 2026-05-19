@@ -150,6 +150,51 @@ def test_dvla_marks_revoked_as_not_active(wired) -> None:
     assert response.restricted_now is False
 
 
+def test_dvla_hides_entitlements_when_suspended(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(
+        CENTRAL, make_new_identity(driving_entitlements=["B", "C1"])
+    )
+    identity_service.suspend(CENTRAL, "ID-001")
+    response = verification.verify_for_dvla(OrganisationRole.DVLA, "ID-001")
+    assert response.active_now is False
+    assert response.entitlements == frozenset()
+    assert response.restrictions == frozenset()
+
+
+def test_dvla_hides_entitlements_when_revoked(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(
+        CENTRAL, make_new_identity(driving_entitlements=["B"])
+    )
+    identity_service.revoke(CENTRAL, "ID-001")
+    response = verification.verify_for_dvla(OrganisationRole.DVLA, "ID-001")
+    assert response.entitlements == frozenset()
+
+
+def test_tax_hides_band_when_suspended(wired) -> None:
+    identity_service, verification, *_ = wired
+    _create_with_tax(identity_service, TaxBand.HIGHER)
+    identity_service.suspend(CENTRAL, "ID-001")
+    response = verification.verify_for_tax(
+        TAX, "ID-001", date(2026, 1, 1), date(2026, 12, 31)
+    )
+    assert response.active_now is False
+    assert response.tax_reference is None
+    assert response.tax_band is None
+
+
+def test_tax_hides_band_when_revoked(wired) -> None:
+    identity_service, verification, *_ = wired
+    _create_with_tax(identity_service, TaxBand.HIGHER)
+    identity_service.revoke(CENTRAL, "ID-001")
+    response = verification.verify_for_tax(
+        TAX, "ID-001", date(2026, 1, 1), date(2026, 12, 31)
+    )
+    assert response.tax_reference is None
+    assert response.tax_band is None
+
+
 def test_tax_detects_revocation_in_period(wired) -> None:
     identity_service, verification, *_ = wired
     _create_with_tax(identity_service)

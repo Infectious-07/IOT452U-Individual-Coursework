@@ -98,7 +98,7 @@ def bootstrap(connection: sqlite3.Connection) -> None:
 # --- identity repository ---
 
 
-def _split_codes(value: str | None, enum_cls: type[StrEnum]) -> frozenset[StrEnum]:
+def _split_codes[E: StrEnum](value: str | None, enum_cls: type[E]) -> frozenset[E]:
     if not value:
         return frozenset()
     return frozenset(enum_cls(piece) for piece in value.split(",") if piece)

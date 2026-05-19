@@ -11,8 +11,7 @@ from models import (
     DrivingRestriction,
     TaxBand,
 )
-from services import DvlaResponse, EmployerResponse, Snapshot, TaxResponse
-from shell import (
+from render import (
     audit_table,
     dvla_response_table,
     employer_response_table,
@@ -21,6 +20,8 @@ from shell import (
     stats_table,
     tax_response_table,
 )
+from services import Snapshot
+from verification import DvlaResponse, EmployerResponse, TaxResponse
 
 
 def _render(renderable) -> str:

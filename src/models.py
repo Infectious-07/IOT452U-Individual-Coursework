@@ -96,10 +96,15 @@ class DrivingRestriction(StrEnum):
 # --- identity entity ---
 
 
-# id, dob and nationality are fixed at creation. Everything else can be amended
-# by the central authority through the lifecycle service.
 @dataclass(frozen=True)
 class DigitalID:
+    """Immutable record of a Digital ID.
+
+    `id`, `dob` and `nationality` are fixed at creation. All other fields are
+    amended through the central authority's lifecycle service, which calls the
+    `with_*` methods to produce new instances rather than mutating in place.
+    """
+
     id: str
     name: str
     dob: date
@@ -173,6 +178,13 @@ class AuditAction(StrEnum):
 
 @dataclass(frozen=True)
 class AuditEvent:
+    """One immutable entry in the append-only audit log.
+
+    Every lifecycle change and every verification call writes an event. The
+    payload is action-specific (the field that changed, the from/to status, or
+    the verification outcome).
+    """
+
     occurred_at: datetime
     actor_role: str
     action: AuditAction
@@ -322,11 +334,11 @@ def validate_residency_status(value: str | None) -> ResidencyStatus:
         raise ValidationError("residency_status", "unknown residency status") from exc
 
 
-def _validate_codes(
+def _validate_codes[E: StrEnum](
     field_name: str,
     value: str | list[str] | None,
-    enum_cls: type[StrEnum],
-) -> frozenset:
+    enum_cls: type[E],
+) -> frozenset[E]:
     if value is None or value == "":
         return frozenset()
     if isinstance(value, str):
@@ -363,6 +375,13 @@ Validator = Callable[[str], object]
 
 @dataclass(frozen=True)
 class Argument:
+    """Declarative description of one user input field on a command.
+
+    When `options` is set the shell offers a constrained choice; with
+    `multi_select` it offers a checkbox list. Otherwise the shell asks for free
+    text and runs `validator` on the answer with a retry budget.
+    """
+
     key: str
     label: str
     default: str | None = None
@@ -373,6 +392,13 @@ class Argument:
 
 @dataclass(frozen=True)
 class Command:
+    """Declarative description of one menu command.
+
+    The shell interprets a command generically: collect every `Argument`, ask
+    for `confirmation` if set, then call `handler` with the collected values.
+    Adding a new command means appending one of these to a portal.
+    """
+
     key: str
     label: str
     description: str
@@ -384,6 +410,13 @@ class Command:
 
 @dataclass
 class Portal:
+    """A bundle of commands available to one organisation role.
+
+    Each portal carries its role, a display title and the list of commands the
+    shell shows to that organisation. The same `MenuShell` drives every portal,
+    so adding a new organisation only means building a new Portal.
+    """
+
     role: OrganisationRole
     title: str
     description: str = ""

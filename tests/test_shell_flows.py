@@ -5,17 +5,18 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-from app import _seed_sample_data, build_portals
+from app import build_portals
 from database import AuditRepository, IdentityRepository, bootstrap, connect
+from exports import ExportService
 from models import Command, OrganisationRole, Portal
+from seed import seed_sample_data
 from services import (
     AuditService,
-    ExportService,
     IdentityService,
     StatsService,
-    VerificationService,
 )
 from shell import _EXIT, MenuShell, Screen, ScriptedPrompter
+from verification import VerificationService
 
 GENERATED_ID = "DID-00000001"
 
@@ -160,7 +161,7 @@ def test_employer_sees_right_to_work(shell_setup) -> None:
             *BASE_CREATE,
             "update_eligibility",
             GENERATED_ID,
-            "yes",
+            "Yes",
             "CITIZEN",
             "__back__",
             "EMPLOYER",
@@ -518,22 +519,22 @@ def _seed_service(tmp_path: Path):
 
 def test_seed_populates_empty_database(tmp_path: Path) -> None:
     service, conn = _seed_service(tmp_path)
-    _seed_sample_data(service)
+    seed_sample_data(service)
     assert len(service.list_all()) == 5
     conn.close()
 
 
 def test_seed_skips_when_data_exists(tmp_path: Path) -> None:
     service, conn = _seed_service(tmp_path)
-    _seed_sample_data(service)
-    _seed_sample_data(service)
+    seed_sample_data(service)
+    seed_sample_data(service)
     assert len(service.list_all()) == 5
     conn.close()
 
 
 def test_seed_creates_varied_statuses(tmp_path: Path) -> None:
     service, conn = _seed_service(tmp_path)
-    _seed_sample_data(service)
+    seed_sample_data(service)
     identities = service.list_all()
     nationalities = {i.nationality for i in identities}
     assert len(nationalities) >= 2

@@ -25,7 +25,19 @@ dev = [
 digital-id = "app:run"
 
 [tool.setuptools]
-py-modules = ["app", "config", "database", "models", "portals", "services", "shell"]
+py-modules = [
+    "app",
+    "config",
+    "database",
+    "exports",
+    "models",
+    "portals",
+    "render",
+    "seed",
+    "services",
+    "shell",
+    "verification",
+]
 
 [tool.setuptools.package-dir]
 "" = "src"
