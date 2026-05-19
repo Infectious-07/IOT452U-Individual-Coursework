@@ -59,15 +59,16 @@ Each Digital ID carries the following attributes.
 
 ```
 src/digital_id
-  domain/         identity entity, enums, roles, exceptions, transitions, validators
-  persistence/    SQLite identity repository and append only audit repository
-  services/       identity lifecycle, audit, verification, export and stats
-  portals/        per organisation Command definitions wired to service handlers
-  cli/            screen, prompter protocol, render helpers and the menu shell
+  models.py       identity entity, enums, roles, exceptions, transitions, validators, portal types
+  database.py     SQLite schema, connection, identity and audit repositories
+  services.py     identity lifecycle, audit, verification, export and stats services
+  portals.py      per organisation Command definitions wired to service handlers
+  shell.py        prompter protocol, screen, render helpers and the menu shell
+  app.py          portal wiring, sample data seeding and application entry point
   config.py       settings loader (reads config.toml with fallback defaults)
 ```
 
-The codebase follows a layered architecture where each layer only depends on the one below it: `domain` has no imports from other layers, `persistence` depends only on `domain`, `services` depend on both, and `portals` plus `cli` sit at the top. This keeps the business rules testable without infrastructure and ensures changes to the UI or database do not ripple through unrelated code.
+The codebase follows a flat module layout where each module only depends on those above it in the list: `models` has no imports from other project modules, `database` depends only on `models`, `services` depends on both, and `shell`, `portals` plus `app` sit at the top. This keeps the business rules testable without infrastructure and ensures changes to the UI or database do not ripple through unrelated code.
 
 Lifecycle operations live in `IdentityService` and only accept the central authority role. Verification logic lives in `VerificationService` and returns a different response type per consumer role. Portals describe their commands as data: each `Command` lists its `Argument` set and an optional confirmation message. The shell drives the prompts and renders results as rich tables.
 
@@ -100,7 +101,7 @@ coverage run -m pytest
 coverage report
 ```
 
-The test suite has 167 tests across 7 test modules:
+The test suite has 167 tests across 6 test modules:
 
 | module | scope |
 | --- | --- |

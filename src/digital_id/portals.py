@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from datetime import date
 from pathlib import Path
 
 from rich.console import Group
 from rich.panel import Panel
 
-from ..cli.render import (
-    audit_table,
-    identity_list_table,
-    identity_panel,
-    stats_table,
-)
-from ..domain.roles import OrganisationRole
-from ..domain.validators import (
+from .models import (
+    Argument,
+    Command,
+    OrganisationRole,
+    Portal,
+    ValidationError,
     generate_identity_id,
     generate_tax_reference,
     validate_dob,
@@ -23,12 +22,25 @@ from ..domain.validators import (
     validate_postcode,
     validate_tax_reference,
 )
-from ..services.admin import ExportService, StatsService
-from ..services.audit_service import AuditService
-from ..services.identity_service import IdentityService, NewIdentity
-from .base import Argument, Command, Portal
+from .services import (
+    AuditService,
+    ExportService,
+    IdentityService,
+    NewIdentity,
+    StatsService,
+    VerificationService,
+)
+from .shell import (
+    audit_table,
+    dvla_response_table,
+    employer_response_table,
+    identity_list_table,
+    identity_panel,
+    stats_table,
+    tax_response_table,
+)
 
-ROLE = OrganisationRole.CENTRAL_AUTHORITY
+# --- central authority portal ---
 
 
 def build_central_portal(
@@ -38,10 +50,11 @@ def build_central_portal(
     stats_service: StatsService,
     id_generator: Callable[[], str] | None = None,
 ) -> Portal:
+    role = OrganisationRole.CENTRAL_AUTHORITY
     gen_id = id_generator or generate_identity_id
 
     portal = Portal(
-        ROLE,
+        role,
         "Central Authority",
         "Create, update and manage Digital ID records.",
     )
@@ -60,7 +73,7 @@ def build_central_portal(
             right_to_work=True,
             residency_status="TEMPORARY",
         )
-        identity = identity_service.create(ROLE, payload)
+        identity = identity_service.create(role, payload)
         notice = Panel(
             f"[bold cyan]Your Digital ID:[/] [bold white]{identity.id}[/]\n"
             f"[bold yellow]Remember this ID for all future operations.[/]",
@@ -71,25 +84,25 @@ def build_central_portal(
 
     def update_name(args: Mapping[str, str]):
         return identity_panel(
-            identity_service.update_name(ROLE, args["identity_id"], args["name"])
+            identity_service.update_name(role, args["identity_id"], args["name"])
         )
 
     def update_postcode(args: Mapping[str, str]):
         return identity_panel(
-            identity_service.update_postcode(ROLE, args["identity_id"], args["postcode"])
+            identity_service.update_postcode(role, args["identity_id"], args["postcode"])
         )
 
     def update_tax(args: Mapping[str, str]):
         ref = args["tax_reference"] or None
         band = args["tax_band"] or None
         return identity_panel(
-            identity_service.update_tax_details(ROLE, args["identity_id"], ref, band)
+            identity_service.update_tax_details(role, args["identity_id"], ref, band)
         )
 
     def update_driving(args: Mapping[str, str]):
         return identity_panel(
             identity_service.update_driving(
-                ROLE,
+                role,
                 args["identity_id"],
                 args["entitlements"],
                 args["restrictions"],
@@ -100,7 +113,7 @@ def build_central_portal(
         right = args["right_to_work"].strip().lower() in {"yes", "y", "true", "1"}
         return identity_panel(
             identity_service.update_eligibility(
-                ROLE,
+                role,
                 args["identity_id"],
                 right,
                 args["residency"],
@@ -108,13 +121,13 @@ def build_central_portal(
         )
 
     def suspend(args: Mapping[str, str]):
-        return identity_panel(identity_service.suspend(ROLE, args["identity_id"]))
+        return identity_panel(identity_service.suspend(role, args["identity_id"]))
 
     def revoke(args: Mapping[str, str]):
-        return identity_panel(identity_service.revoke(ROLE, args["identity_id"]))
+        return identity_panel(identity_service.revoke(role, args["identity_id"]))
 
     def reactivate(args: Mapping[str, str]):
-        return identity_panel(identity_service.reactivate(ROLE, args["identity_id"]))
+        return identity_panel(identity_service.reactivate(role, args["identity_id"]))
 
     def show(args: Mapping[str, str]):
         return identity_panel(identity_service.get(args["identity_id"]))
@@ -134,16 +147,16 @@ def build_central_portal(
     def export(args: Mapping[str, str]):
         directory = Path(args["directory"])
         identities_count = export_service.export_identities(
-            ROLE, directory / "identities.csv"
+            role, directory / "identities.csv"
         )
-        audit_count = export_service.export_audit(ROLE, directory / "audit.csv")
+        audit_count = export_service.export_audit(role, directory / "audit.csv")
         return (
             f"[bold green]Exported[/] {identities_count} identity rows and "
             f"{audit_count} audit rows to {directory}"
         )
 
     def stats(_args: Mapping[str, str]):
-        return stats_table(stats_service.snapshot(ROLE))
+        return stats_table(stats_service.snapshot(role))
 
     _id = Argument("identity_id", "Identity ID", validator=validate_identity_id)
 
@@ -289,4 +302,97 @@ def build_central_portal(
         )
     )
     portal.add(Command("stats", "Show statistics", "Counts by status and recent activity", (), stats, group="Reports"))
+    return portal
+
+
+# --- consumer portals ---
+
+
+def _validate_date(value: str) -> None:
+    try:
+        date.fromisoformat(value.strip())
+    except ValueError as exc:
+        raise ValidationError("date", "expected ISO date YYYY-MM-DD") from exc
+
+
+def _identity_arg() -> Argument:
+    return Argument("identity_id", "Identity ID", validator=validate_identity_id)
+
+
+def build_tax_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.TAX,
+        "Tax Authority",
+        "Verify identity status and check for suspensions within a reporting period.",
+    )
+
+    def verify(args: Mapping[str, str]):
+        start = date.fromisoformat(args["period_start"])
+        end = date.fromisoformat(args["period_end"])
+        response = verification.verify_for_tax(
+            OrganisationRole.TAX, args["identity_id"], start, end
+        )
+        return tax_response_table(response)
+
+    portal.add(
+        Command(
+            "verify",
+            "Verify for a reporting period",
+            "Check identity exists, is active and was not suspended in the period.",
+            (
+                _identity_arg(),
+                Argument("period_start", "Period start (YYYY-MM-DD)", validator=_validate_date),
+                Argument("period_end", "Period end (YYYY-MM-DD)", validator=_validate_date),
+            ),
+            verify,
+        )
+    )
+    return portal
+
+
+def build_dvla_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.DVLA,
+        "Driving Licence Authority",
+        "Verify active status, restrictions and driving entitlements.",
+    )
+
+    def verify(args: Mapping[str, str]):
+        return dvla_response_table(
+            verification.verify_for_dvla(OrganisationRole.DVLA, args["identity_id"])
+        )
+
+    portal.add(
+        Command(
+            "verify",
+            "Verify for licensing",
+            "Returns active status, restriction flag, entitlements and restrictions.",
+            (_identity_arg(),),
+            verify,
+        )
+    )
+    return portal
+
+
+def build_employer_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.EMPLOYER,
+        "Employer",
+        "Verify identity validity and right to work status.",
+    )
+
+    def verify(args: Mapping[str, str]):
+        return employer_response_table(
+            verification.verify_for_employer(OrganisationRole.EMPLOYER, args["identity_id"])
+        )
+
+    portal.add(
+        Command(
+            "verify",
+            "Verify validity and right to work",
+            "Returns whether the identity is valid and has the right to work.",
+            (_identity_arg(),),
+            verify,
+        )
+    )
     return portal

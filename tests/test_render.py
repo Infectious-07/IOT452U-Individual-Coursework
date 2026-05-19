@@ -4,7 +4,15 @@ from io import StringIO
 from rich.console import Console
 from tests.conftest import make_sample_identity
 
-from digital_id.cli.render import (
+from digital_id.models import (
+    AuditAction,
+    AuditEvent,
+    DrivingEntitlement,
+    DrivingRestriction,
+    TaxBand,
+)
+from digital_id.services import DvlaResponse, EmployerResponse, Snapshot, TaxResponse
+from digital_id.shell import (
     audit_table,
     dvla_response_table,
     employer_response_table,
@@ -13,15 +21,6 @@ from digital_id.cli.render import (
     stats_table,
     tax_response_table,
 )
-from digital_id.domain.identity import (
-    AuditAction,
-    AuditEvent,
-    DrivingEntitlement,
-    DrivingRestriction,
-    TaxBand,
-)
-from digital_id.services.admin import Snapshot
-from digital_id.services.verification import DvlaResponse, EmployerResponse, TaxResponse
 
 
 def _render(renderable) -> str:

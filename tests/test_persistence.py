@@ -4,19 +4,24 @@ from pathlib import Path
 import pytest
 from tests.conftest import make_sample_identity
 
-from digital_id.domain.exceptions import DuplicateIdentityError, IdentityNotFoundError
-from digital_id.domain.identity import (
+from digital_id.database import (
+    AUDIT_SCHEMA,
+    AuditRepository,
+    IdentityRepository,
+    bootstrap,
+    connect,
+)
+from digital_id.models import (
     AuditAction,
     AuditEvent,
     DrivingEntitlement,
     DrivingRestriction,
+    DuplicateIdentityError,
+    IdentityNotFoundError,
     IdentityStatus,
     ResidencyStatus,
     TaxBand,
 )
-from digital_id.persistence.audit_repository import AuditRepository
-from digital_id.persistence.database import AUDIT_SCHEMA, bootstrap, connect
-from digital_id.persistence.identity_repository import IdentityRepository
 
 # identity repository
 

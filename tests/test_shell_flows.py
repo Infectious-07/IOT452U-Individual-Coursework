@@ -5,17 +5,17 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-from digital_id.cli.app import _seed_sample_data, build_portals
-from digital_id.cli.prompter import ScriptedPrompter
-from digital_id.cli.screen import Screen
-from digital_id.cli.shell import _EXIT, MenuShell
-from digital_id.persistence.audit_repository import AuditRepository
-from digital_id.persistence.database import bootstrap, connect
-from digital_id.persistence.identity_repository import IdentityRepository
-from digital_id.services.admin import ExportService, StatsService
-from digital_id.services.audit_service import AuditService
-from digital_id.services.identity_service import IdentityService
-from digital_id.services.verification import VerificationService
+from digital_id.app import _seed_sample_data, build_portals
+from digital_id.database import AuditRepository, IdentityRepository, bootstrap, connect
+from digital_id.models import Command, OrganisationRole, Portal
+from digital_id.services import (
+    AuditService,
+    ExportService,
+    IdentityService,
+    StatsService,
+    VerificationService,
+)
+from digital_id.shell import _EXIT, MenuShell, Screen, ScriptedPrompter
 
 GENERATED_ID = "DID-00000001"
 
@@ -624,9 +624,6 @@ def test_unknown_command_key_is_skipped(shell_setup) -> None:
 
 
 def test_value_error_from_handler_shows_error(shell_setup) -> None:
-    from digital_id.domain.roles import OrganisationRole
-    from digital_id.portals.base import Command, Portal
-
     portals, screen, sink = shell_setup
 
     def _raise(args):
@@ -661,14 +658,14 @@ def test_pause_between_actions(shell_setup) -> None:
 
 
 def test_run_wires_up_and_exits(tmp_path: Path) -> None:
-    from digital_id.cli.app import run
+    from digital_id.app import run
     from digital_id.config import Settings
 
     settings = Settings(database_path=str(tmp_path / "run_test.sqlite"))
 
     import unittest.mock as mock
 
-    with mock.patch("digital_id.cli.app.MenuShell") as MockShell:
+    with mock.patch("digital_id.app.MenuShell") as MockShell:
         MockShell.return_value.run.return_value = None
         run(settings)
         MockShell.return_value.run.assert_called_once()

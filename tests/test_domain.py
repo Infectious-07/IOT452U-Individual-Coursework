@@ -5,30 +5,26 @@ from pathlib import Path
 import pytest
 from tests.conftest import make_sample_identity
 
-from digital_id.cli.prompter import ScriptedPrompter
-from digital_id.cli.screen import Screen
 from digital_id.config import DEFAULT_DB_PATH, load
-from digital_id.domain.exceptions import (
+from digital_id.models import (
     AuthorisationError,
-    DigitalIdError,
-    DuplicateIdentityError,
-    IdentityNotFoundError,
-    InvalidTransitionError,
-    ValidationError,
-)
-from digital_id.domain.identity import (
     DigitalID,
+    DigitalIdError,
     DrivingEntitlement,
     DrivingRestriction,
+    DuplicateIdentityError,
+    IdentityNotFoundError,
     IdentityStatus,
+    InvalidTransitionError,
+    OrganisationRole,
+    Portal,
     ResidencyStatus,
     TaxBand,
+    ValidationError,
     assert_allowed,
-    is_allowed,
-)
-from digital_id.domain.roles import OrganisationRole, require
-from digital_id.domain.roles import is_allowed as role_is_allowed
-from digital_id.domain.validators import (
+    is_role_allowed,
+    is_valid_transition,
+    require,
     validate_dob,
     validate_driving_entitlements,
     validate_driving_restrictions,
@@ -40,7 +36,7 @@ from digital_id.domain.validators import (
     validate_tax_band,
     validate_tax_reference,
 )
-from digital_id.portals.base import Portal
+from digital_id.shell import Screen, ScriptedPrompter
 
 # entity
 
@@ -85,7 +81,7 @@ def test_status_values_are_stable() -> None:
     ],
 )
 def test_transition_matrix(current, target, expected) -> None:
-    assert is_allowed(current, target) is expected
+    assert is_valid_transition(current, target) is expected
 
 
 def test_assert_allowed_raises_on_forbidden() -> None:
@@ -218,7 +214,7 @@ CONSUMER_ROLES = [
 
 @pytest.mark.parametrize("action", ["create", "update", "suspend", "revoke", "reactivate"])
 def test_central_authority_can_run_lifecycle_actions(action: str) -> None:
-    assert role_is_allowed(OrganisationRole.CENTRAL_AUTHORITY, action) is True
+    assert is_role_allowed(OrganisationRole.CENTRAL_AUTHORITY, action) is True
 
 
 @pytest.mark.parametrize("role", CONSUMER_ROLES)
@@ -226,12 +222,12 @@ def test_central_authority_can_run_lifecycle_actions(action: str) -> None:
 def test_consumer_roles_cannot_run_lifecycle_actions(
     role: OrganisationRole, action: str
 ) -> None:
-    assert role_is_allowed(role, action) is False
+    assert is_role_allowed(role, action) is False
 
 
 @pytest.mark.parametrize("role", CONSUMER_ROLES + [OrganisationRole.CENTRAL_AUTHORITY])
 def test_every_role_can_verify(role: OrganisationRole) -> None:
-    assert role_is_allowed(role, "verify") is True
+    assert is_role_allowed(role, "verify") is True
 
 
 def test_require_raises_authorisation_error_for_disallowed() -> None:

@@ -4,15 +4,17 @@ from pathlib import Path
 import pytest
 from tests.conftest import make_new_identity
 
-from digital_id.domain.exceptions import (
+from digital_id.models import (
     AuthorisationError,
     DuplicateIdentityError,
+    IdentityStatus,
     InvalidTransitionError,
+    OrganisationRole,
+    ResidencyStatus,
+    TaxBand,
     ValidationError,
 )
-from digital_id.domain.identity import IdentityStatus, ResidencyStatus, TaxBand
-from digital_id.domain.roles import OrganisationRole
-from digital_id.services.admin import ExportService, StatsService
+from digital_id.services import ExportService, StatsService
 
 CENTRAL = OrganisationRole.CENTRAL_AUTHORITY
 CONSUMER = OrganisationRole.EMPLOYER

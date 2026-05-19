@@ -7,14 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from digital_id.domain.identity import DigitalID, IdentityStatus, ResidencyStatus
-from digital_id.domain.roles import OrganisationRole
-from digital_id.persistence.audit_repository import AuditRepository
-from digital_id.persistence.database import bootstrap, connect
-from digital_id.persistence.identity_repository import IdentityRepository
-from digital_id.services.audit_service import AuditService
-from digital_id.services.identity_service import IdentityService, NewIdentity
-from digital_id.services.verification import VerificationService
+from digital_id.database import AuditRepository, IdentityRepository, bootstrap, connect
+from digital_id.models import DigitalID, IdentityStatus, OrganisationRole, ResidencyStatus
+from digital_id.services import AuditService, IdentityService, NewIdentity, VerificationService
 
 
 def _stepping_clock(start: datetime) -> Callable[[], datetime]:
@@ -28,7 +23,6 @@ def _stepping_clock(start: datetime) -> Callable[[], datetime]:
     return _tick
 
 
-# a shared default payload that every service test can reuse without ceremony
 def make_new_identity(
     identity_id: str = "ID-001",
     name: str = "Ada Lovelace",
