@@ -129,23 +129,89 @@ def test_employer_drops_right_to_work_when_invalid(wired) -> None:
     assert response.right_to_work is False
 
 
-# lookup
+# welfare
 
-def test_welfare_lookup_returns_name_and_residency(wired) -> None:
+def test_welfare_returns_name_residency_and_right_to_work(wired) -> None:
     identity_service, verification, *_ = wired
-    identity_service.create(CENTRAL, make_new_identity(residency_status="CITIZEN"))
-    response = verification.verify_lookup(OrganisationRole.WELFARE, "ID-001")
+    identity_service.create(
+        CENTRAL, make_new_identity(residency_status="CITIZEN", right_to_work=True)
+    )
+    response = verification.verify_for_welfare(OrganisationRole.WELFARE, "ID-001")
     assert response.name == "Ada Lovelace"
     assert response.residency_status is ResidencyStatus.CITIZEN
+    assert response.right_to_work is True
 
 
-def test_local_authority_lookup_hides_name_when_invalid(wired) -> None:
+def test_welfare_hides_fields_when_invalid(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity(right_to_work=True))
+    identity_service.revoke(CENTRAL, "ID-001")
+    response = verification.verify_for_welfare(OrganisationRole.WELFARE, "ID-001")
+    assert response.valid_now is False
+    assert response.name is None
+    assert response.right_to_work is False
+
+
+# local authority
+
+def test_local_authority_returns_name_address_and_residency(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity(residency_status="RESIDENT"))
+    response = verification.verify_for_local_authority(
+        OrganisationRole.LOCAL_AUTHORITY, "ID-001"
+    )
+    assert response.name == "Ada Lovelace"
+    assert response.address == "10 Downing Street, London"
+    assert response.residency_status is ResidencyStatus.RESIDENT
+
+
+def test_local_authority_hides_fields_when_invalid(wired) -> None:
     identity_service, verification, *_ = wired
     identity_service.create(CENTRAL, make_new_identity())
     identity_service.revoke(CENTRAL, "ID-001")
-    response = verification.verify_lookup(OrganisationRole.LOCAL_AUTHORITY, "ID-001")
+    response = verification.verify_for_local_authority(
+        OrganisationRole.LOCAL_AUTHORITY, "ID-001"
+    )
     assert response.valid_now is False
     assert response.name is None
+    assert response.address is None
+
+
+# immigration
+
+def test_immigration_returns_nationality_and_work_status(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(
+        CENTRAL, make_new_identity(right_to_work=True, residency_status="TEMPORARY")
+    )
+    response = verification.verify_for_immigration(
+        OrganisationRole.IMMIGRATION, "ID-001"
+    )
+    assert response.valid_now is True
+    assert response.nationality == "GB"
+    assert response.right_to_work is True
+    assert response.residency_status is ResidencyStatus.TEMPORARY
+
+
+def test_immigration_hides_fields_when_invalid(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity())
+    identity_service.revoke(CENTRAL, "ID-001")
+    response = verification.verify_for_immigration(
+        OrganisationRole.IMMIGRATION, "ID-001"
+    )
+    assert response.valid_now is False
+    assert response.nationality is None
+    assert response.right_to_work is False
+
+
+def test_immigration_reports_unknown_identity(wired) -> None:
+    _, verification, *_ = wired
+    response = verification.verify_for_immigration(
+        OrganisationRole.IMMIGRATION, "ID-999"
+    )
+    assert response.valid_now is False
+    assert response.nationality is None
 
 
 # cross role authorisation
@@ -157,7 +223,9 @@ def test_local_authority_lookup_hides_name_when_invalid(wired) -> None:
         ("verify_for_dvla", OrganisationRole.BANK, {}),
         ("verify_for_bank", OrganisationRole.TAX, {}),
         ("verify_for_employer", OrganisationRole.TAX, {}),
-        ("verify_lookup", OrganisationRole.BANK, {}),
+        ("verify_for_welfare", OrganisationRole.BANK, {}),
+        ("verify_for_local_authority", OrganisationRole.BANK, {}),
+        ("verify_for_immigration", OrganisationRole.BANK, {}),
     ],
 )
 def test_each_endpoint_blocks_other_roles(wired, method, role, kwargs) -> None:

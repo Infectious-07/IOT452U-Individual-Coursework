@@ -10,6 +10,7 @@ CONSUMER_ROLES = [
     OrganisationRole.EMPLOYER,
     OrganisationRole.WELFARE,
     OrganisationRole.LOCAL_AUTHORITY,
+    OrganisationRole.IMMIGRATION,
 ]
 
 

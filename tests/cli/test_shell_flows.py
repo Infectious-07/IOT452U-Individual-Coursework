@@ -182,7 +182,7 @@ def test_tax_period_check(shell_setup) -> None:
     assert "HIGHER" in output
 
 
-def test_welfare_lookup_shows_residency(shell_setup) -> None:
+def test_welfare_verify_shows_residency(shell_setup) -> None:
     output = run_shell(
         shell_setup,
         [
