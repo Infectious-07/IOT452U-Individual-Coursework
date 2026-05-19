@@ -44,6 +44,22 @@ Each Digital ID carries the following attributes.
 
 Each consumer portal sees only the attributes its organisation needs.
 
+## Consumer portals and verification responses
+
+Each consumer organisation has a dedicated verification endpoint that returns a tailored response shape.
+
+| portal | method | response fields |
+| --- | --- | --- |
+| Tax Authority | `verify_for_tax` | exists, active_now, suspended_in_period, period_start, period_end, tax_reference, tax_band |
+| Driving Licence Authority | `verify_for_dvla` | exists, active_now, restricted_now, entitlements, restrictions |
+| Bank | `verify_for_bank` | valid_now |
+| Employer | `verify_for_employer` | valid_now, right_to_work |
+| Welfare Services | `verify_for_welfare` | valid_now, name, residency_status, right_to_work |
+| Local Authority | `verify_for_local_authority` | valid_now, name, address, residency_status |
+| Immigration Authority | `verify_for_immigration` | valid_now, nationality, right_to_work, residency_status |
+
+When an identity is not active the response hides sensitive fields and returns only the validity flag.
+
 ## Architecture
 
 ```
@@ -57,7 +73,7 @@ src/digital_id
   config/         settings loader
 ```
 
-Lifecycle operations live in `IdentityService` and only accept the central authority role. Verification logic lives in `VerificationService` and returns a different response type per consumer role. Portals describe their commands as data: each `Command` lists its `Argument` set and an optional confirmation message. The shell drives the prompts and renders results as rich tables.
+Lifecycle operations live in `IdentityService` and only accept the central authority role. Verification logic lives in `VerificationService` and returns a different response type per consumer role. There are eight portals in total: one for the central authority and seven for consumer organisations (tax, DVLA, bank, employer, welfare, local authority and immigration). Portals describe their commands as data: each `Command` lists its `Argument` set and an optional confirmation message. The shell drives the prompts and renders results as rich tables.
 
 Domain rules to note:
 - A revoked Digital ID is terminal. Updates and further transitions are rejected.
