@@ -17,6 +17,7 @@ class Argument:
     label: str
     default: str | None = None
     validator: Validator | None = None
+    options: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)

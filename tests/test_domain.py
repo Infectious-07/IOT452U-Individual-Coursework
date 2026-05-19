@@ -171,7 +171,7 @@ def test_tax_band_validates() -> None:
 
 
 def test_residency_validates() -> None:
-    assert validate_residency_status(None) is ResidencyStatus.NONE
+    assert validate_residency_status(None) is ResidencyStatus.TEMPORARY
     assert validate_residency_status("citizen") is ResidencyStatus.CITIZEN
     with pytest.raises(ValidationError):
         validate_residency_status("alien")

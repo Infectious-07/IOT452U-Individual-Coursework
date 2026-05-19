@@ -13,9 +13,9 @@ from ..cli.render import (
     identity_panel,
     stats_table,
 )
-from ..domain.exceptions import ValidationError
 from ..domain.validators import (
     generate_identity_id,
+    generate_tax_reference,
     validate_dob,
     validate_driving_entitlements,
     validate_driving_restrictions,
@@ -23,8 +23,6 @@ from ..domain.validators import (
     validate_name,
     validate_nationality,
     validate_postcode,
-    validate_residency_status,
-    validate_tax_band,
     validate_tax_reference,
 )
 from ..services.audit_service import AuditService
@@ -34,11 +32,6 @@ from ..services.stats_service import StatsService
 from .base import Argument, Command, Portal
 
 ROLE = OrganisationRole.CENTRAL_AUTHORITY
-
-
-def _validate_yes_no(value: str) -> None:
-    if value.strip().lower() not in {"yes", "no", "y", "n", "true", "false", "1", "0"}:
-        raise ValidationError("right_to_work", "expected yes or no")
 
 
 def build_central_portal(
@@ -64,6 +57,11 @@ def build_central_portal(
             dob=args["dob"],
             nationality=args["nationality"],
             postcode=args["postcode"],
+            tax_reference=generate_tax_reference(),
+            tax_band="BASIC",
+            driving_entitlements="B",
+            right_to_work=True,
+            residency_status="TEMPORARY",
         )
         identity = identity_service.create(ROLE, payload)
         notice = Panel(
@@ -197,7 +195,7 @@ def build_central_portal(
             (
                 _id,
                 Argument("tax_reference", "Tax reference (blank to clear)", default="", validator=validate_tax_reference),
-                Argument("tax_band", "Tax band (BASIC, HIGHER, ADDITIONAL, EXEMPT)", default="", validator=validate_tax_band),
+                Argument("tax_band", "Tax band", options=("BASIC", "HIGHER", "ADDITIONAL", "EXEMPT")),
             ),
             update_tax,
             group="Updates",
@@ -234,13 +232,8 @@ def build_central_portal(
             "Set the right to work flag and the residency status",
             (
                 _id,
-                Argument("right_to_work", "Right to work (yes/no)", default="no", validator=_validate_yes_no),
-                Argument(
-                    "residency",
-                    "Residency (CITIZEN, RESIDENT, TEMPORARY, NONE)",
-                    default="NONE",
-                    validator=validate_residency_status,
-                ),
+                Argument("right_to_work", "Right to work", options=("Yes", "No")),
+                Argument("residency", "Residency status", options=("TEMPORARY", "CITIZEN", "RESIDENT", "NONE")),
             ),
             update_eligibility,
             group="Updates",

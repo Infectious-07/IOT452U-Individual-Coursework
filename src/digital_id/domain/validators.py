@@ -22,6 +22,10 @@ def generate_identity_id() -> str:
     return f"DID-{uuid.uuid4().hex[:8].upper()}"
 
 
+def generate_tax_reference() -> str:
+    return f"UTR{uuid.uuid4().hex[:7].upper()}"
+
+
 def validate_identity_id(identity_id: str) -> str:
     cleaned = (identity_id or "").strip().upper()
     if not _ID_PATTERN.fullmatch(cleaned):
@@ -90,7 +94,7 @@ def validate_tax_band(value: str | None) -> TaxBand | None:
 
 def validate_residency_status(value: str | None) -> ResidencyStatus:
     if value is None or not str(value).strip():
-        return ResidencyStatus.NONE
+        return ResidencyStatus.TEMPORARY
     try:
         return ResidencyStatus(str(value).strip().upper())
     except ValueError as exc:

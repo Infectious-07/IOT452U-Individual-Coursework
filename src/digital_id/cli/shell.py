@@ -68,7 +68,11 @@ class MenuShell:
             self._screen.clear()
             self._screen.header(portal.title, "Commands")
             choices: list[Choice | Separator] = []
+            last_group = ""
             for command in portal.commands:
+                if command.group and command.group != last_group:
+                    choices.append(Separator(f"  {command.group}"))
+                    last_group = command.group
                 prefix = GROUP_PREFIX.get(command.group, " ")
                 choices.append(
                     Choice(f"{prefix} {command.label}", command.key, command.description)
@@ -91,6 +95,9 @@ class MenuShell:
             self._run_command(portal, command)
 
     def _collect_argument(self, argument: Argument) -> str | None:
+        if argument.options:
+            option_choices = [Choice(opt, opt) for opt in argument.options]
+            return self._prompter.choose(argument.label, option_choices)
         for attempt in range(_MAX_ATTEMPTS):
             remaining = _MAX_ATTEMPTS - attempt - 1
             value = self._prompter.ask(argument.label, default=argument.default)

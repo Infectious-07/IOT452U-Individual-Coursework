@@ -58,7 +58,7 @@ class DigitalID:
     driving_entitlements: frozenset[DrivingEntitlement] = field(default_factory=frozenset)
     driving_restrictions: frozenset[DrivingRestriction] = field(default_factory=frozenset)
     right_to_work: bool = False
-    residency_status: ResidencyStatus = ResidencyStatus.NONE
+    residency_status: ResidencyStatus = ResidencyStatus.TEMPORARY
 
     def with_name(self, new_name: str, now: datetime) -> DigitalID:
         return replace(self, name=new_name, updated_at=now)

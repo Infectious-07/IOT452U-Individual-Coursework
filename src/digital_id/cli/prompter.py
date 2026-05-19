@@ -34,7 +34,7 @@ class QuestionaryPrompter:
             "pointer": "fg:ansicyan bold",
             "highlighted": "fg:ansicyan bold underline",
             "selected": "fg:ansigreen bold",
-            "separator": "fg:ansiyellow",
+            "separator": "fg:ansiblue bold",
             "instruction": "fg:ansigray italic",
         })
         question_choices = []
