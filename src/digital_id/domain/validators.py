@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import date
+from enum import StrEnum
 
 from .exceptions import ValidationError
 from .identity import (
@@ -101,7 +102,7 @@ def validate_residency_status(value: str | None) -> ResidencyStatus:
         raise ValidationError("residency_status", "unknown residency status") from exc
 
 
-def _validate_codes(field_name: str, value, enum_cls):
+def _validate_codes(field_name: str, value: str | list | None, enum_cls: type[StrEnum]):
     if value is None or value == "":
         return frozenset()
     if isinstance(value, str):

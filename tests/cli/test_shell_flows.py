@@ -361,6 +361,146 @@ def test_export_writes_files(shell_setup, tmp_path: Path) -> None:
     assert (tmp_path / "audit.csv").exists()
 
 
+def test_update_postcode_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "update_postcode",
+            GENERATED_ID,
+            "EC2R 8AH",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "EC2R 8AH" in output
+
+
+def test_update_tax_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "update_tax",
+            GENERATED_ID,
+            "UTR99999",
+            "HIGHER",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "HIGHER" in output
+
+
+def test_update_eligibility_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "update_eligibility",
+            GENERATED_ID,
+            "Yes",
+            "CITIZEN",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "CITIZEN" in output
+
+
+def test_suspend_and_reactivate_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "suspend",
+            GENERATED_ID,
+            True,
+            "reactivate",
+            GENERATED_ID,
+            "show",
+            GENERATED_ID,
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "ACTIVE" in output
+
+
+def test_list_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "list",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert GENERATED_ID in output
+    assert "Ada Lovelace" in output
+
+
+def test_history_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "history",
+            GENERATED_ID,
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "CREATE" in output
+
+
+def test_stats_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "stats",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "1" in output
+
+
+def test_update_name_flow(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "update_name",
+            GENERATED_ID,
+            "Grace Hopper",
+            "show",
+            GENERATED_ID,
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "Grace Hopper" in output
+
+
 def test_exit_from_portal_selection(shell_setup) -> None:
     output = run_shell(shell_setup, [_EXIT])
     assert "Thank you" in output

@@ -103,6 +103,52 @@ def test_revoked_is_terminal(wired) -> None:
         identity_service.reactivate(CENTRAL, "ID-001")
 
 
+def test_update_name_noop_when_unchanged(wired) -> None:
+    identity_service, *_ = wired
+    original = identity_service.create(CENTRAL, make_new_identity())
+    result = identity_service.update_name(CENTRAL, "ID-001", "Ada Lovelace")
+    assert result.updated_at == original.updated_at
+
+
+def test_update_postcode_noop_when_unchanged(wired) -> None:
+    identity_service, *_ = wired
+    original = identity_service.create(CENTRAL, make_new_identity())
+    result = identity_service.update_postcode(CENTRAL, "ID-001", "SW1A 2AA")
+    assert result.updated_at == original.updated_at
+
+
+def test_update_tax_noop_when_unchanged(wired) -> None:
+    identity_service, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity(tax_reference="UTR12345", tax_band="HIGHER"))
+    original = identity_service.get("ID-001")
+    result = identity_service.update_tax_details(CENTRAL, "ID-001", "UTR12345", "HIGHER")
+    assert result.updated_at == original.updated_at
+
+
+def test_update_driving_noop_when_unchanged(wired) -> None:
+    identity_service, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity(driving_entitlements="B"))
+    original = identity_service.get("ID-001")
+    result = identity_service.update_driving(CENTRAL, "ID-001", "B", "")
+    assert result.updated_at == original.updated_at
+
+
+def test_update_eligibility_noop_when_unchanged(wired) -> None:
+    identity_service, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity(right_to_work=True, residency_status="CITIZEN"))
+    original = identity_service.get("ID-001")
+    result = identity_service.update_eligibility(CENTRAL, "ID-001", True, "CITIZEN")
+    assert result.updated_at == original.updated_at
+
+
+def test_transition_to_same_status_is_idempotent(wired) -> None:
+    identity_service, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity())
+    identity_service.suspend(CENTRAL, "ID-001")
+    result = identity_service.suspend(CENTRAL, "ID-001")
+    assert result.status is IdentityStatus.SUSPENDED
+
+
 def test_list_all(wired) -> None:
     identity_service, *_ = wired
     identity_service.create(CENTRAL, make_new_identity("ID-001"))

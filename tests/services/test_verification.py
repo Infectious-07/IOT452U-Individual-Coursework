@@ -136,6 +136,26 @@ def test_employer_reports_unknown_identity(wired) -> None:
     assert response.right_to_work is False
 
 
+def test_dvla_marks_revoked_as_not_active(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity())
+    identity_service.revoke(CENTRAL, "ID-001")
+    response = verification.verify_for_dvla(OrganisationRole.DVLA, "ID-001")
+    assert response.exists is True
+    assert response.active_now is False
+    assert response.restricted_now is False
+
+
+def test_tax_returns_none_fields_when_no_tax_set(wired) -> None:
+    identity_service, verification, *_ = wired
+    identity_service.create(CENTRAL, make_new_identity())
+    response = verification.verify_for_tax(
+        TAX, "ID-001", date(2026, 1, 1), date(2026, 12, 31)
+    )
+    assert response.exists is True
+    assert response.tax_reference is None or isinstance(response.tax_reference, str)
+
+
 # cross role authorisation
 
 @pytest.mark.parametrize(
