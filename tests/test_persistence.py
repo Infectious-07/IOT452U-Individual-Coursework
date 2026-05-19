@@ -15,16 +15,17 @@ from digital_id.domain.identity import (
     TaxBand,
 )
 from digital_id.persistence.audit_repository import AuditRepository
-from digital_id.persistence.database import bootstrap, connect
+from digital_id.persistence.database import AUDIT_SCHEMA, bootstrap, connect
 from digital_id.persistence.identity_repository import IdentityRepository
 
 # identity repository
 
 @pytest.fixture
-def identities(tmp_path: Path) -> IdentityRepository:
+def identities(tmp_path: Path):
     connection = connect(tmp_path / "identities.sqlite")
     bootstrap(connection)
-    return IdentityRepository(connection)
+    yield IdentityRepository(connection)
+    connection.close()
 
 
 def test_identity_add_and_get_roundtrip(identities: IdentityRepository) -> None:
@@ -90,15 +91,17 @@ def test_bootstrap_is_idempotent_on_existing_database(tmp_path: Path) -> None:
     repo = IdentityRepository(second)
     repo.add(make_sample_identity())
     assert repo.exists("ID-001")
+    second.close()
 
 
 # audit repository
 
 @pytest.fixture
-def audit(tmp_path: Path) -> AuditRepository:
+def audit(tmp_path: Path):
     connection = connect(tmp_path / "audit.sqlite")
     bootstrap(connection)
-    return AuditRepository(connection)
+    yield AuditRepository(connection)
+    connection.close()
 
 
 def _event(when: datetime, action: AuditAction, identity_id: str = "ID-001") -> AuditEvent:
@@ -134,6 +137,32 @@ def test_audit_list_between_filters_by_period(audit: AuditRepository) -> None:
     )
     assert len(middle) == 1
     assert middle[0].action is AuditAction.SUSPEND
+
+
+def test_update_nonexistent_identity_raises(identities: IdentityRepository) -> None:
+    sample = make_sample_identity("ID-MISSING")
+    with pytest.raises(IdentityNotFoundError):
+        identities.update(sample)
+
+
+def test_bootstrap_migration_adds_columns_to_legacy_table(tmp_path: Path) -> None:
+    path = tmp_path / "legacy.sqlite"
+    conn = connect(path)
+    conn.execute(
+        "CREATE TABLE identities ("
+        "id TEXT PRIMARY KEY, name TEXT NOT NULL, dob TEXT NOT NULL, "
+        "status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+    )
+    conn.execute(AUDIT_SCHEMA)
+    conn.commit()
+    bootstrap(conn)
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(identities)")}
+    assert "nationality" in columns
+    assert "tax_band" in columns
+    assert "driving_entitlements" in columns
+    assert "right_to_work" in columns
+    assert "residency_status" in columns
+    conn.close()
 
 
 def test_audit_list_between_without_id_returns_all(audit: AuditRepository) -> None:

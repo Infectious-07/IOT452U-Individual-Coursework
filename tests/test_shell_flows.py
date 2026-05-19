@@ -56,7 +56,8 @@ def shell_setup(tmp_path: Path):
     sink = io.StringIO()
     console = Console(file=sink, force_terminal=False, record=True, width=120)
     screen = Screen(console=console)
-    return portals, screen, sink
+    yield portals, screen, sink
+    connection.close()
 
 
 def run_shell(shell_setup, answers):
@@ -507,33 +508,36 @@ def test_exit_from_portal_selection(shell_setup) -> None:
 
 # seed sample data
 
-def _seed_service(tmp_path: Path) -> IdentityService:
+def _seed_service(tmp_path: Path):
     connection = connect(tmp_path / "seed.sqlite")
     bootstrap(connection)
     identities = IdentityRepository(connection)
     audit = AuditService(AuditRepository(connection))
-    return IdentityService(identities, audit)
+    return IdentityService(identities, audit), connection
 
 
 def test_seed_populates_empty_database(tmp_path: Path) -> None:
-    service = _seed_service(tmp_path)
+    service, conn = _seed_service(tmp_path)
     _seed_sample_data(service)
     assert len(service.list_all()) == 5
+    conn.close()
 
 
 def test_seed_skips_when_data_exists(tmp_path: Path) -> None:
-    service = _seed_service(tmp_path)
+    service, conn = _seed_service(tmp_path)
     _seed_sample_data(service)
     _seed_sample_data(service)
     assert len(service.list_all()) == 5
+    conn.close()
 
 
 def test_seed_creates_varied_statuses(tmp_path: Path) -> None:
-    service = _seed_service(tmp_path)
+    service, conn = _seed_service(tmp_path)
     _seed_sample_data(service)
     identities = service.list_all()
     nationalities = {i.nationality for i in identities}
     assert len(nationalities) >= 2
+    conn.close()
 
 
 # shell edge cases
@@ -604,6 +608,56 @@ def test_ask_returns_none_aborts(shell_setup) -> None:
         ],
     )
     assert "Thank you" not in output or "Thank you" in output
+
+
+def test_invalid_portal_selection_is_skipped(shell_setup) -> None:
+    output = run_shell(shell_setup, ["INVALID_ROLE", _EXIT])
+    assert "Thank you" in output
+
+
+def test_unknown_command_key_is_skipped(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        ["CENTRAL_AUTHORITY", "NONEXISTENT_COMMAND", "__back__", _EXIT],
+    )
+    assert "Thank you" in output
+
+
+def test_value_error_from_handler_shows_error(shell_setup) -> None:
+    from digital_id.domain.roles import OrganisationRole
+    from digital_id.portals.base import Command, Portal
+
+    portals, screen, sink = shell_setup
+
+    def _raise(args):
+        raise ValueError("bad value")
+
+    portal = Portal(OrganisationRole.CENTRAL_AUTHORITY, "Central Authority")
+    portal.add(Command("bad", "Bad", "", (), _raise))
+    prompter = ScriptedPrompter(["CENTRAL_AUTHORITY", "bad", "__back__", _EXIT])
+    shell = MenuShell(
+        {OrganisationRole.CENTRAL_AUTHORITY: portal},
+        prompter=prompter,
+        screen=screen,
+        pause_between_actions=False,
+    )
+    with contextlib.suppress(SystemExit):
+        shell.run()
+    assert "bad value" in sink.getvalue()
+
+
+def test_pause_between_actions(shell_setup) -> None:
+    from unittest.mock import patch
+
+    portals, screen, sink = shell_setup
+    prompter = ScriptedPrompter(["CENTRAL_AUTHORITY", "list", "__back__", _EXIT])
+    with patch.object(screen.console, "input", return_value=""):
+        shell = MenuShell(
+            portals, prompter=prompter, screen=screen, pause_between_actions=True
+        )
+        with contextlib.suppress(SystemExit):
+            shell.run()
+    assert "no identities yet" in sink.getvalue()
 
 
 def test_run_wires_up_and_exits(tmp_path: Path) -> None:

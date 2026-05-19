@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 from tests.conftest import make_sample_identity
 
+from digital_id.cli.prompter import ScriptedPrompter
+from digital_id.cli.screen import Screen
 from digital_id.config import DEFAULT_DB_PATH, load
 from digital_id.domain.exceptions import (
     AuthorisationError,
@@ -38,6 +40,7 @@ from digital_id.domain.validators import (
     validate_tax_band,
     validate_tax_reference,
 )
+from digital_id.portals.base import Portal
 
 # entity
 
@@ -261,3 +264,53 @@ def test_load_uses_defaults_for_missing_keys(tmp_path: Path) -> None:
     config_path.write_text("")
     settings = load(config_path)
     assert settings.database_path == DEFAULT_DB_PATH
+
+
+# prompter
+
+def test_scripted_prompter_raises_when_exhausted() -> None:
+    p = ScriptedPrompter([])
+    with pytest.raises(AssertionError, match="ran out"):
+        p.choose("?", [])
+
+
+def test_scripted_prompter_confirm_defaults_on_none() -> None:
+    p = ScriptedPrompter([None])
+    assert p.confirm("ok?", default=True) is True
+
+
+# screen
+
+def test_screen_info_prints_plain_text() -> None:
+    from io import StringIO
+
+    from rich.console import Console
+    sink = StringIO()
+    screen = Screen(console=Console(file=sink, force_terminal=False, width=120))
+    screen.info("test message")
+    assert "test message" in sink.getvalue()
+
+
+def test_screen_success_prints_styled() -> None:
+    from io import StringIO
+
+    from rich.console import Console
+    sink = StringIO()
+    screen = Screen(console=Console(file=sink, force_terminal=False, width=120))
+    screen.success("done")
+    assert "done" in sink.getvalue()
+
+
+def test_screen_pause_calls_console_input() -> None:
+    from unittest.mock import MagicMock
+    mock_console = MagicMock()
+    screen = Screen(console=mock_console)
+    screen.pause()
+    mock_console.input.assert_called_once()
+
+
+# portal
+
+def test_portal_find_returns_none_for_unknown_key() -> None:
+    portal = Portal(OrganisationRole.CENTRAL_AUTHORITY, "Test")
+    assert portal.find("nonexistent") is None

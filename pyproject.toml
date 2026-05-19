@@ -37,6 +37,7 @@ ignore = ["E501"]
 [tool.coverage.run]
 source = ["src/digital_id"]
 branch = true
+omit = ["src/digital_id/__main__.py"]
 
 [tool.coverage.report]
 show_missing = true

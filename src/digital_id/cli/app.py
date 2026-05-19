@@ -120,4 +120,7 @@ def run(settings: Settings | None = None) -> None:
     stats = StatsService(identities, audit_repo)
     _seed_sample_data(identity_service)
     portals = build_portals(identity_service, audit, verification, exports, stats)
-    MenuShell(portals).run()
+    try:
+        MenuShell(portals).run()
+    finally:
+        connection.close()
