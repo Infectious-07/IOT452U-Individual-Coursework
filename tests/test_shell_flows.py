@@ -624,9 +624,9 @@ def test_unknown_command_key_is_skipped(shell_setup) -> None:
 
 
 def test_value_error_from_handler_shows_error(shell_setup) -> None:
-    portals, screen, sink = shell_setup
+    _, screen, sink = shell_setup
 
-    def _raise(args):
+    def _raise(_args):
         raise ValueError("bad value")
 
     portal = Portal(OrganisationRole.CENTRAL_AUTHORITY, "Central Authority")
@@ -665,7 +665,7 @@ def test_run_wires_up_and_exits(tmp_path: Path) -> None:
 
     import unittest.mock as mock
 
-    with mock.patch("app.MenuShell") as MockShell:
-        MockShell.return_value.run.return_value = None
+    with mock.patch("app.MenuShell") as mock_shell:
+        mock_shell.return_value.run.return_value = None
         run(settings)
-        MockShell.return_value.run.assert_called_once()
+        mock_shell.return_value.run.assert_called_once()

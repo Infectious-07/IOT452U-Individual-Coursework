@@ -185,7 +185,7 @@ def test_tax_returns_none_fields_when_no_tax_set(wired) -> None:
 # cross role authorisation
 
 @pytest.mark.parametrize(
-    "method,role,kwargs",
+    ("method", "role", "kwargs"),
     [
         ("verify_for_tax", OrganisationRole.EMPLOYER, {"period_start": date(2026, 1, 1), "period_end": date(2026, 3, 31)}),
         ("verify_for_dvla", OrganisationRole.EMPLOYER, {}),

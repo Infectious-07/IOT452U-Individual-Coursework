@@ -68,7 +68,7 @@ def test_status_values_are_stable() -> None:
 # transitions
 
 @pytest.mark.parametrize(
-    "current,target,expected",
+    ("current", "target", "expected"),
     [
         (IdentityStatus.ACTIVE, IdentityStatus.SUSPENDED, True),
         (IdentityStatus.ACTIVE, IdentityStatus.REVOKED, True),
@@ -225,7 +225,7 @@ def test_consumer_roles_cannot_run_lifecycle_actions(
     assert is_role_allowed(role, action) is False
 
 
-@pytest.mark.parametrize("role", CONSUMER_ROLES + [OrganisationRole.CENTRAL_AUTHORITY])
+@pytest.mark.parametrize("role", [*CONSUMER_ROLES, OrganisationRole.CENTRAL_AUTHORITY])
 def test_every_role_can_verify(role: OrganisationRole) -> None:
     assert is_role_allowed(role, "verify") is True
 
