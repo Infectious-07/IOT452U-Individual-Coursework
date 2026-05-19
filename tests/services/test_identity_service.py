@@ -11,7 +11,7 @@ from digital_id.domain.identity import IdentityStatus, ResidencyStatus, TaxBand
 from tests.conftest import make_new_identity
 
 CENTRAL = OrganisationRole.CENTRAL_AUTHORITY
-BANK = OrganisationRole.BANK
+CONSUMER = OrganisationRole.EMPLOYER
 
 
 def test_create_returns_active_identity(wired) -> None:
@@ -25,7 +25,7 @@ def test_create_returns_active_identity(wired) -> None:
 def test_create_rejects_non_central_actor(wired) -> None:
     identity_service, *_ = wired
     with pytest.raises(AuthorisationError):
-        identity_service.create(BANK, make_new_identity())
+        identity_service.create(CONSUMER, make_new_identity())
 
 
 def test_create_rejects_bad_input(wired) -> None:

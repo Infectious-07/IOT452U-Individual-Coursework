@@ -10,15 +10,7 @@ from ..persistence.database import bootstrap, connect
 from ..persistence.identity_repository import IdentityRepository
 from ..portals.base import Portal
 from ..portals.central_authority import build_central_portal
-from ..portals.consumer import (
-    build_bank_portal,
-    build_dvla_portal,
-    build_employer_portal,
-    build_immigration_portal,
-    build_local_authority_portal,
-    build_tax_portal,
-    build_welfare_portal,
-)
+from ..portals.consumer import build_dvla_portal, build_employer_portal, build_tax_portal
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService
@@ -40,11 +32,7 @@ def build_portals(
         ),
         OrganisationRole.TAX: build_tax_portal(verification),
         OrganisationRole.DVLA: build_dvla_portal(verification),
-        OrganisationRole.BANK: build_bank_portal(verification),
         OrganisationRole.EMPLOYER: build_employer_portal(verification),
-        OrganisationRole.WELFARE: build_welfare_portal(verification),
-        OrganisationRole.LOCAL_AUTHORITY: build_local_authority_portal(verification),
-        OrganisationRole.IMMIGRATION: build_immigration_portal(verification),
     }
 
 

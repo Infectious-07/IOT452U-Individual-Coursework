@@ -49,7 +49,7 @@ def test_export_audit_includes_lifecycle_events(admin_setup) -> None:
 def test_export_blocked_for_consumer_roles(admin_setup) -> None:
     _, exporter, _, base = admin_setup
     with pytest.raises(AuthorisationError):
-        exporter.export_identities(OrganisationRole.BANK, base / "denied.csv")
+        exporter.export_identities(OrganisationRole.EMPLOYER, base / "denied.csv")
 
 
 # stats

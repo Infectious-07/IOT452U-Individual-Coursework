@@ -6,11 +6,7 @@ from digital_id.domain.exceptions import AuthorisationError
 CONSUMER_ROLES = [
     OrganisationRole.TAX,
     OrganisationRole.DVLA,
-    OrganisationRole.BANK,
     OrganisationRole.EMPLOYER,
-    OrganisationRole.WELFARE,
-    OrganisationRole.LOCAL_AUTHORITY,
-    OrganisationRole.IMMIGRATION,
 ]
 
 
@@ -34,8 +30,8 @@ def test_every_role_can_verify(role: OrganisationRole) -> None:
 
 def test_require_raises_authorisation_error_for_disallowed() -> None:
     with pytest.raises(AuthorisationError) as excinfo:
-        require(OrganisationRole.BANK, "create")
-    assert excinfo.value.role == "BANK"
+        require(OrganisationRole.EMPLOYER, "create")
+    assert excinfo.value.role == "EMPLOYER"
     assert excinfo.value.action == "create"
 
 

@@ -4,7 +4,7 @@ import pytest
 
 from digital_id.authorisation.roles import OrganisationRole
 from digital_id.domain.exceptions import AuthorisationError, ValidationError
-from digital_id.domain.identity import DrivingEntitlement, ResidencyStatus, TaxBand
+from digital_id.domain.identity import DrivingEntitlement, TaxBand
 from tests.conftest import make_new_identity
 
 CENTRAL = OrganisationRole.CENTRAL_AUTHORITY
@@ -104,14 +104,14 @@ def test_dvla_marks_suspended_as_restricted(wired) -> None:
     assert response.restricted_now is True
 
 
-# bank and employer
+def test_dvla_reports_unknown_identity(wired) -> None:
+    _, verification, *_ = wired
+    response = verification.verify_for_dvla(OrganisationRole.DVLA, "ID-999")
+    assert response.exists is False
+    assert response.entitlements == frozenset()
 
-def test_bank_returns_valid_now_only(wired) -> None:
-    identity_service, verification, *_ = wired
-    identity_service.create(CENTRAL, make_new_identity())
-    response = verification.verify_for_bank(OrganisationRole.BANK, "ID-001")
-    assert response.valid_now is True
 
+# employer
 
 def test_employer_returns_right_to_work(wired) -> None:
     identity_service, verification, *_ = wired
@@ -129,89 +129,11 @@ def test_employer_drops_right_to_work_when_invalid(wired) -> None:
     assert response.right_to_work is False
 
 
-# welfare
-
-def test_welfare_returns_name_residency_and_right_to_work(wired) -> None:
-    identity_service, verification, *_ = wired
-    identity_service.create(
-        CENTRAL, make_new_identity(residency_status="CITIZEN", right_to_work=True)
-    )
-    response = verification.verify_for_welfare(OrganisationRole.WELFARE, "ID-001")
-    assert response.name == "Ada Lovelace"
-    assert response.residency_status is ResidencyStatus.CITIZEN
-    assert response.right_to_work is True
-
-
-def test_welfare_hides_fields_when_invalid(wired) -> None:
-    identity_service, verification, *_ = wired
-    identity_service.create(CENTRAL, make_new_identity(right_to_work=True))
-    identity_service.revoke(CENTRAL, "ID-001")
-    response = verification.verify_for_welfare(OrganisationRole.WELFARE, "ID-001")
-    assert response.valid_now is False
-    assert response.name is None
-    assert response.right_to_work is False
-
-
-# local authority
-
-def test_local_authority_returns_name_address_and_residency(wired) -> None:
-    identity_service, verification, *_ = wired
-    identity_service.create(CENTRAL, make_new_identity(residency_status="RESIDENT"))
-    response = verification.verify_for_local_authority(
-        OrganisationRole.LOCAL_AUTHORITY, "ID-001"
-    )
-    assert response.name == "Ada Lovelace"
-    assert response.address == "10 Downing Street, London"
-    assert response.residency_status is ResidencyStatus.RESIDENT
-
-
-def test_local_authority_hides_fields_when_invalid(wired) -> None:
-    identity_service, verification, *_ = wired
-    identity_service.create(CENTRAL, make_new_identity())
-    identity_service.revoke(CENTRAL, "ID-001")
-    response = verification.verify_for_local_authority(
-        OrganisationRole.LOCAL_AUTHORITY, "ID-001"
-    )
-    assert response.valid_now is False
-    assert response.name is None
-    assert response.address is None
-
-
-# immigration
-
-def test_immigration_returns_nationality_and_work_status(wired) -> None:
-    identity_service, verification, *_ = wired
-    identity_service.create(
-        CENTRAL, make_new_identity(right_to_work=True, residency_status="TEMPORARY")
-    )
-    response = verification.verify_for_immigration(
-        OrganisationRole.IMMIGRATION, "ID-001"
-    )
-    assert response.valid_now is True
-    assert response.nationality == "GB"
-    assert response.right_to_work is True
-    assert response.residency_status is ResidencyStatus.TEMPORARY
-
-
-def test_immigration_hides_fields_when_invalid(wired) -> None:
-    identity_service, verification, *_ = wired
-    identity_service.create(CENTRAL, make_new_identity())
-    identity_service.revoke(CENTRAL, "ID-001")
-    response = verification.verify_for_immigration(
-        OrganisationRole.IMMIGRATION, "ID-001"
-    )
-    assert response.valid_now is False
-    assert response.nationality is None
-    assert response.right_to_work is False
-
-
-def test_immigration_reports_unknown_identity(wired) -> None:
+def test_employer_reports_unknown_identity(wired) -> None:
     _, verification, *_ = wired
-    response = verification.verify_for_immigration(
-        OrganisationRole.IMMIGRATION, "ID-999"
-    )
+    response = verification.verify_for_employer(OrganisationRole.EMPLOYER, "ID-999")
     assert response.valid_now is False
-    assert response.nationality is None
+    assert response.right_to_work is False
 
 
 # cross role authorisation
@@ -219,13 +141,9 @@ def test_immigration_reports_unknown_identity(wired) -> None:
 @pytest.mark.parametrize(
     "method,role,kwargs",
     [
-        ("verify_for_tax", OrganisationRole.BANK, {"period_start": date(2026, 1, 1), "period_end": date(2026, 3, 31)}),
-        ("verify_for_dvla", OrganisationRole.BANK, {}),
-        ("verify_for_bank", OrganisationRole.TAX, {}),
+        ("verify_for_tax", OrganisationRole.EMPLOYER, {"period_start": date(2026, 1, 1), "period_end": date(2026, 3, 31)}),
+        ("verify_for_dvla", OrganisationRole.EMPLOYER, {}),
         ("verify_for_employer", OrganisationRole.TAX, {}),
-        ("verify_for_welfare", OrganisationRole.BANK, {}),
-        ("verify_for_local_authority", OrganisationRole.BANK, {}),
-        ("verify_for_immigration", OrganisationRole.BANK, {}),
     ],
 )
 def test_each_endpoint_blocks_other_roles(wired, method, role, kwargs) -> None:

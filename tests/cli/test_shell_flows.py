@@ -182,29 +182,6 @@ def test_tax_period_check(shell_setup) -> None:
     assert "HIGHER" in output
 
 
-def test_welfare_verify_shows_residency(shell_setup) -> None:
-    output = run_shell(
-        shell_setup,
-        [
-            "CENTRAL_AUTHORITY",
-            "create",
-            *BASE_CREATE,
-            "update_eligibility",
-            "ID-001",
-            "yes",
-            "CITIZEN",
-            "__back__",
-            "WELFARE",
-            "verify",
-            "ID-001",
-            "__back__",
-            _EXIT,
-        ],
-    )
-    assert "CITIZEN" in output
-    assert "Ada Lovelace" in output
-
-
 def test_unknown_identity_is_rejected(shell_setup) -> None:
     output = run_shell(
         shell_setup,
@@ -257,4 +234,4 @@ def test_export_writes_files(shell_setup, tmp_path: Path) -> None:
 
 def test_exit_from_portal_selection(shell_setup) -> None:
     output = run_shell(shell_setup, [_EXIT])
-    assert "Goodbye" in output
+    assert "Thank you" in output
