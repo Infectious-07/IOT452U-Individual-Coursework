@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import uuid
 from datetime import date
 
 from .exceptions import ValidationError
@@ -15,6 +16,10 @@ _NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z '\-]{0,98}[A-Za-z.]$")
 _ID_PATTERN = re.compile(r"^[A-Z0-9\-]{4,32}$")
 _NATIONALITY_PATTERN = re.compile(r"^[A-Z]{2}$")
 _TAX_REF_PATTERN = re.compile(r"^[A-Z0-9]{6,16}$")
+
+
+def generate_identity_id() -> str:
+    return f"DID-{uuid.uuid4().hex[:8].upper()}"
 
 
 def validate_identity_id(identity_id: str) -> str:

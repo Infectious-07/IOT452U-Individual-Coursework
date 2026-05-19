@@ -18,13 +18,25 @@ from digital_id.services.identity_service import IdentityService
 from digital_id.services.stats_service import StatsService
 from digital_id.services.verification import VerificationService
 
+GENERATED_ID = "DID-00000001"
+
 BASE_CREATE = [
-    "ID-001",
     "Ada Lovelace",
     "1990-05-01",
     "GB",
     "10 Downing Street, London",
 ]
+
+
+def _deterministic_generator():
+    counter = 0
+
+    def generate():
+        nonlocal counter
+        counter += 1
+        return f"DID-{counter:08d}"
+
+    return generate
 
 
 @pytest.fixture
@@ -38,7 +50,10 @@ def shell_setup(tmp_path: Path):
     verification = VerificationService(identities, audit)
     exports = ExportService(identities, audit_repo)
     stats = StatsService(identities, audit_repo)
-    portals = build_portals(identity_service, audit, verification, exports, stats)
+    portals = build_portals(
+        identity_service, audit, verification, exports, stats,
+        id_generator=_deterministic_generator(),
+    )
     sink = io.StringIO()
     console = Console(file=sink, force_terminal=False, record=True, width=120)
     screen = Screen(console=console)
@@ -62,14 +77,15 @@ def test_create_and_show_identity(shell_setup) -> None:
             "create",
             *BASE_CREATE,
             "show",
-            "ID-001",
+            GENERATED_ID,
             "__back__",
             _EXIT,
         ],
     )
-    assert "ID-001" in output
+    assert GENERATED_ID in output
     assert "Ada Lovelace" in output
     assert "ACTIVE" in output
+    assert "Remember this ID" in output
 
 
 def test_revoke_requires_confirmation_and_blocks_when_cancelled(shell_setup) -> None:
@@ -80,10 +96,10 @@ def test_revoke_requires_confirmation_and_blocks_when_cancelled(shell_setup) -> 
             "create",
             *BASE_CREATE,
             "revoke",
-            "ID-001",
+            GENERATED_ID,
             False,
             "show",
-            "ID-001",
+            GENERATED_ID,
             "__back__",
             _EXIT,
         ],
@@ -100,10 +116,10 @@ def test_revoke_completes_when_confirmed(shell_setup) -> None:
             "create",
             *BASE_CREATE,
             "revoke",
-            "ID-001",
+            GENERATED_ID,
             True,
             "show",
-            "ID-001",
+            GENERATED_ID,
             "__back__",
             _EXIT,
         ],
@@ -119,13 +135,13 @@ def test_dvla_verify_uses_driving_data(shell_setup) -> None:
             "create",
             *BASE_CREATE,
             "update_driving",
-            "ID-001",
+            GENERATED_ID,
             "B,C1",
             "GLASSES",
             "__back__",
             "DVLA",
             "verify",
-            "ID-001",
+            GENERATED_ID,
             "__back__",
             _EXIT,
         ],
@@ -143,13 +159,13 @@ def test_employer_sees_right_to_work(shell_setup) -> None:
             "create",
             *BASE_CREATE,
             "update_eligibility",
-            "ID-001",
+            GENERATED_ID,
             "yes",
             "CITIZEN",
             "__back__",
             "EMPLOYER",
             "verify",
-            "ID-001",
+            GENERATED_ID,
             "__back__",
             _EXIT,
         ],
@@ -166,13 +182,13 @@ def test_tax_period_check(shell_setup) -> None:
             "create",
             *BASE_CREATE,
             "update_tax",
-            "ID-001",
+            GENERATED_ID,
             "UTR12345",
             "HIGHER",
             "__back__",
             "TAX",
             "verify",
-            "ID-001",
+            GENERATED_ID,
             "2026-01-01",
             "2026-12-31",
             "__back__",
@@ -201,7 +217,7 @@ def test_validation_rejects_bad_id_after_three_attempts(shell_setup) -> None:
         shell_setup,
         [
             "CENTRAL_AUTHORITY",
-            "create",
+            "show",
             "BAD",
             "NO",
             "X",
@@ -236,20 +252,19 @@ def test_invalid_input_retries_then_succeeds(shell_setup) -> None:
         [
             "CENTRAL_AUTHORITY",
             "create",
-            "BAD",
-            "ID-002",
+            "A",
             "Ada Lovelace",
             "1990-05-01",
             "GB",
             "10 Downing Street, London",
             "show",
-            "ID-002",
+            GENERATED_ID,
             "__back__",
             _EXIT,
         ],
     )
     assert "invalid" in output.lower()
-    assert "ID-002" in output
+    assert GENERATED_ID in output
     assert "Ada Lovelace" in output
     assert "ACTIVE" in output
 
@@ -260,7 +275,6 @@ def test_invalid_date_is_caught_at_prompt(shell_setup) -> None:
         [
             "CENTRAL_AUTHORITY",
             "create",
-            "ID-003",
             "Ada Lovelace",
             "not-a-date",
             "also-bad",
@@ -272,7 +286,7 @@ def test_invalid_date_is_caught_at_prompt(shell_setup) -> None:
         ],
     )
     assert "invalid" in output.lower()
-    assert "ID-003" in output
+    assert GENERATED_ID in output
 
 
 def test_consumer_portal_validates_identity_id(shell_setup) -> None:
@@ -302,7 +316,7 @@ def test_tax_portal_validates_dates(shell_setup) -> None:
             "__back__",
             "TAX",
             "verify",
-            "ID-001",
+            GENERATED_ID,
             "bad-date",
             "2026-01-01",
             "2026-12-31",
@@ -311,6 +325,22 @@ def test_tax_portal_validates_dates(shell_setup) -> None:
         ],
     )
     assert "invalid" in output.lower()
+
+
+def test_auto_generated_id_is_shown_on_create(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert GENERATED_ID in output
+    assert "ID Created" in output
+    assert "Remember this ID" in output
 
 
 def test_export_writes_files(shell_setup, tmp_path: Path) -> None:

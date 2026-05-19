@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
+
+from rich.console import Group
+from rich.panel import Panel
 
 from ..authorisation.roles import OrganisationRole
 from ..cli.render import (
@@ -12,6 +15,7 @@ from ..cli.render import (
 )
 from ..domain.exceptions import ValidationError
 from ..domain.validators import (
+    generate_identity_id,
     validate_address,
     validate_dob,
     validate_driving_entitlements,
@@ -42,7 +46,10 @@ def build_central_portal(
     audit_service: AuditService,
     export_service: ExportService,
     stats_service: StatsService,
+    id_generator: Callable[[], str] | None = None,
 ) -> Portal:
+    gen_id = id_generator or generate_identity_id
+
     portal = Portal(
         ROLE,
         "Central Authority",
@@ -50,14 +57,22 @@ def build_central_portal(
     )
 
     def create(args: Mapping[str, str]):
+        identity_id = gen_id()
         payload = NewIdentity(
-            identity_id=args["identity_id"],
+            identity_id=identity_id,
             name=args["name"],
             dob=args["dob"],
             nationality=args["nationality"],
             address=args["address"],
         )
-        return identity_panel(identity_service.create(ROLE, payload))
+        identity = identity_service.create(ROLE, payload)
+        notice = Panel(
+            f"[bold cyan]Your Digital ID:[/] [bold white]{identity.id}[/]\n"
+            f"[bold yellow]Remember this ID for all future operations.[/]",
+            border_style="green",
+            title="[bold green]ID Created[/]",
+        )
+        return Group(notice, identity_panel(identity))
 
     def update_name(args: Mapping[str, str]):
         return identity_panel(
@@ -143,15 +158,17 @@ def build_central_portal(
             "Create a Digital ID",
             "Issue a new Digital ID with the mandatory base attributes",
             (
-                Argument("identity_id", "Identity ID", validator=validate_identity_id),
                 Argument("name", "Full name", validator=validate_name),
                 Argument("dob", "Date of birth (YYYY-MM-DD)", validator=validate_dob),
                 Argument("nationality", "Nationality (ISO 3166 alpha-2)", default="GB", validator=validate_nationality),
                 Argument("address", "Address", validator=validate_address),
             ),
             create,
+            group="Records",
         )
     )
+    portal.add(Command("show", "Show a Digital ID", "Display the current record", (_id,), show, group="Records"))
+    portal.add(Command("list", "List Digital IDs", "Show every record in the system", (), list_all, group="Records"))
     portal.add(
         Command(
             "update_name",
@@ -159,6 +176,7 @@ def build_central_portal(
             "Change the name on an existing record",
             (_id, Argument("name", "New name", validator=validate_name)),
             update_name,
+            group="Updates",
         )
     )
     portal.add(
@@ -168,6 +186,7 @@ def build_central_portal(
             "Change the registered address",
             (_id, Argument("address", "New address", validator=validate_address)),
             update_address,
+            group="Updates",
         )
     )
     portal.add(
@@ -181,6 +200,7 @@ def build_central_portal(
                 Argument("tax_band", "Tax band (BASIC, HIGHER, ADDITIONAL, EXEMPT)", default="", validator=validate_tax_band),
             ),
             update_tax,
+            group="Updates",
         )
     )
     portal.add(
@@ -204,6 +224,7 @@ def build_central_portal(
                 ),
             ),
             update_driving,
+            group="Updates",
         )
     )
     portal.add(
@@ -222,6 +243,7 @@ def build_central_portal(
                 ),
             ),
             update_eligibility,
+            group="Updates",
         )
     )
     portal.add(
@@ -232,6 +254,7 @@ def build_central_portal(
             (_id,),
             suspend,
             confirmation="Suspending a Digital ID blocks all consumer checks. Continue?",
+            group="Lifecycle",
         )
     )
     portal.add(
@@ -242,6 +265,7 @@ def build_central_portal(
             (_id,),
             revoke,
             confirmation="Revoking a Digital ID is permanent and cannot be undone. Continue?",
+            group="Lifecycle",
         )
     )
     portal.add(
@@ -251,10 +275,9 @@ def build_central_portal(
             "Move a suspended ID back to active",
             (_id,),
             reactivate,
+            group="Lifecycle",
         )
     )
-    portal.add(Command("show", "Show a Digital ID", "Display the current record", (_id,), show))
-    portal.add(Command("list", "List Digital IDs", "Show every record in the system", (), list_all))
     portal.add(
         Command(
             "history",
@@ -262,6 +285,7 @@ def build_central_portal(
             "List the audit events recorded for an ID",
             (_id,),
             history,
+            group="Reports",
         )
     )
     portal.add(
@@ -271,7 +295,8 @@ def build_central_portal(
             "Write identities and audit events to two CSV files",
             (Argument("directory", "Output directory"),),
             export,
+            group="Reports",
         )
     )
-    portal.add(Command("stats", "Show statistics", "Counts by status and recent activity", (), stats))
+    portal.add(Command("stats", "Show statistics", "Counts by status and recent activity", (), stats, group="Reports"))
     return portal

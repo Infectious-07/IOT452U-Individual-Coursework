@@ -25,10 +25,12 @@ def build_portals(
     verification: VerificationService,
     export_service: ExportService,
     stats_service: StatsService,
+    id_generator=None,
 ) -> Mapping[OrganisationRole, Portal]:
     return {
         OrganisationRole.CENTRAL_AUTHORITY: build_central_portal(
-            identity_service, audit_service, export_service, stats_service
+            identity_service, audit_service, export_service, stats_service,
+            id_generator=id_generator,
         ),
         OrganisationRole.TAX: build_tax_portal(verification),
         OrganisationRole.DVLA: build_dvla_portal(verification),

@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from ..authorisation.roles import OrganisationRole
 from ..domain.exceptions import DigitalIdError
 from ..portals.base import Argument, Portal
-from .prompter import Choice, Prompter, QuestionaryPrompter
+from .prompter import Choice, Prompter, QuestionaryPrompter, Separator
 from .screen import Screen
 
 _BACK = "__back__"
@@ -42,10 +42,11 @@ class MenuShell:
 
     def _pick_portal(self) -> str | None:
         self._screen.rule("Select a portal")
-        choices = [
+        choices: list[Choice | Separator] = [
             Choice(portal.title, portal.role.value, portal.description)
             for portal in self._portals
         ]
+        choices.append(Separator())
         choices.append(Choice("Exit", _EXIT))
         return self._prompter.choose("Portal", choices)
 
@@ -59,10 +60,16 @@ class MenuShell:
         while True:
             self._screen.clear()
             self._screen.header(portal.title, "Commands")
-            choices = [
-                Choice(command.label, command.key, command.description)
-                for command in portal.commands
-            ]
+            choices: list[Choice | Separator] = []
+            last_group = ""
+            for command in portal.commands:
+                if command.group and command.group != last_group:
+                    choices.append(Separator(f"  {command.group}"))
+                    last_group = command.group
+                choices.append(
+                    Choice(command.label, command.key, command.description)
+                )
+            choices.append(Separator())
             choices.append(Choice("Back to portals", _BACK))
             choices.append(Choice("Exit", _EXIT))
             choice = self._prompter.choose(f"{portal.title}", choices)

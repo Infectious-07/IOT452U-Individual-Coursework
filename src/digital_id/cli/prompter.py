@@ -12,22 +12,46 @@ class Choice:
     description: str = ""
 
 
+@dataclass(frozen=True)
+class Separator:
+    text: str = ""
+
+
 class Prompter(Protocol):
-    def choose(self, title: str, choices: Sequence[Choice]) -> str | None: ...
+    def choose(self, title: str, choices: Sequence[Choice | Separator]) -> str | None: ...
     def ask(self, message: str, default: str | None = None) -> str | None: ...
     def confirm(self, message: str, default: bool = False) -> bool: ...
 
 
 class QuestionaryPrompter:
-    # production backend; uses arrow key menus and styled prompts
-    def choose(self, title: str, choices: Sequence[Choice]) -> str | None:
+    def choose(self, title: str, choices: Sequence[Choice | Separator]) -> str | None:
         import questionary
+        from prompt_toolkit.styles import Style
 
-        question_choices = [
-            questionary.Choice(title=choice.label, value=choice.value)
-            for choice in choices
-        ]
-        return questionary.select(title, choices=question_choices).ask()
+        style = Style.from_dict({
+            "question": "bold",
+            "answer": "fg:ansicyan bold",
+            "pointer": "fg:ansicyan bold",
+            "highlighted": "fg:ansicyan bold underline",
+            "selected": "fg:ansigreen bold",
+            "separator": "fg:ansiyellow",
+            "instruction": "fg:ansigray italic",
+        })
+        question_choices = []
+        for item in choices:
+            if isinstance(item, Separator):
+                question_choices.append(questionary.Separator(item.text))
+            else:
+                question_choices.append(
+                    questionary.Choice(title=item.label, value=item.value)
+                )
+        return questionary.select(
+            title,
+            choices=question_choices,
+            style=style,
+            pointer="▶",
+            instruction="(arrow keys to navigate, enter to select)",
+        ).ask()
 
     def ask(self, message: str, default: str | None = None) -> str | None:
         import questionary
@@ -43,7 +67,6 @@ class QuestionaryPrompter:
 
 @dataclass
 class ScriptedPrompter:
-    # test backend; pops scripted answers in order
     answers: list
 
     def __init__(self, answers: Sequence) -> None:
@@ -54,7 +77,7 @@ class ScriptedPrompter:
             raise AssertionError("ScriptedPrompter ran out of answers")
         return self.answers.pop(0)
 
-    def choose(self, _title: str, _choices: Sequence[Choice]) -> str | None:
+    def choose(self, _title: str, _choices: Sequence[Choice | Separator]) -> str | None:
         return self._pop()
 
     def ask(self, _message: str, default: str | None = None) -> str | None:

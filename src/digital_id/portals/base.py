@@ -27,6 +27,7 @@ class Command:
     arguments: Sequence[Argument]
     handler: CommandHandler
     confirmation: str | None = None
+    group: str = ""
 
 
 @dataclass
