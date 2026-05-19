@@ -77,6 +77,7 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
 
 
 def _existing_columns(connection: sqlite3.Connection, table: str) -> set[str]:
+    # PRAGMA does not support parameterised queries; table name is always a literal
     return {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
 
 

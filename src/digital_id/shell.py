@@ -249,7 +249,7 @@ class Screen:
 # --- render helpers ---
 
 
-def _codes(codes) -> str:
+def _codes(codes: frozenset) -> str:
     return ", ".join(sorted(code.value for code in codes)) or "-"
 
 

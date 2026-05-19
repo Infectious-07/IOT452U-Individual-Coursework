@@ -322,7 +322,11 @@ def validate_residency_status(value: str | None) -> ResidencyStatus:
         raise ValidationError("residency_status", "unknown residency status") from exc
 
 
-def _validate_codes(field_name: str, value: str | list | None, enum_cls: type[StrEnum]):
+def _validate_codes(
+    field_name: str,
+    value: str | list[str] | None,
+    enum_cls: type[StrEnum],
+) -> frozenset:
     if value is None or value == "":
         return frozenset()
     if isinstance(value, str):
@@ -338,19 +342,22 @@ def _validate_codes(field_name: str, value: str | list | None, enum_cls: type[St
     return frozenset(result)
 
 
-def validate_driving_entitlements(value) -> frozenset[DrivingEntitlement]:
+def validate_driving_entitlements(
+    value: str | list[str] | None,
+) -> frozenset[DrivingEntitlement]:
     return _validate_codes("driving_entitlements", value, DrivingEntitlement)
 
 
-def validate_driving_restrictions(value) -> frozenset[DrivingRestriction]:
+def validate_driving_restrictions(
+    value: str | list[str] | None,
+) -> frozenset[DrivingRestriction]:
     return _validate_codes("driving_restrictions", value, DrivingRestriction)
 
 
 # --- portal types ---
 
 
-CommandResult = Any
-CommandHandler = Callable[[Mapping[str, str]], CommandResult]
+CommandHandler = Callable[[Mapping[str, str]], Any]
 Validator = Callable[[str], object]
 
 

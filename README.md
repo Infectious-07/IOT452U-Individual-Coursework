@@ -72,6 +72,33 @@ The codebase follows a flat module layout where each module only depends on thos
 
 Lifecycle operations live in `IdentityService` and only accept the central authority role. Verification logic lives in `VerificationService` and returns a different response type per consumer role. Portals describe their commands as data: each `Command` lists its `Argument` set and an optional confirmation message. The shell drives the prompts and renders results as rich tables.
 
+## Data flow
+
+A typical request moves through four layers.
+
+```
+User input                       Screen output
+    |                                  ^
+    v                                  |
+ MenuShell  --- Prompter ----------> Screen / rich Console
+    |                                  ^
+    v                                  |
+ Portal     --- Command.handler ----> render function
+    |                                  ^
+    v                                  |
+ Service    --- business rules -----> response dataclass
+    |                                  ^
+    v                                  |
+ Repository --- SQLite / audit log --> domain entity
+```
+
+1. The `MenuShell` shows portal and command menus through the `Prompter` protocol. It collects arguments, runs validators and asks for confirmation when the command says so.
+2. The selected `Command` handler calls the appropriate service method, passing validated arguments.
+3. The service enforces authorisation with `require()`, applies domain rules, persists the change through its repository and writes an audit event.
+4. The handler passes the returned entity or response dataclass to a render function, which builds a rich `Table` or `Panel` that the shell prints to the console.
+
+Verification follows the same path but the service returns a role-scoped response (for example `TaxResponse`) that omits fields the consumer is not entitled to see.
+
 ## Design decisions
 
 **Frozen dataclasses for entities.** `DigitalID` and `AuditEvent` are immutable. Every mutation returns a new instance via `dataclasses.replace`, which prevents accidental aliasing bugs and makes it obvious when state has changed. The `with_*` methods on `DigitalID` enforce the `updated_at` timestamp and keep the replace call in one place.
@@ -112,4 +139,4 @@ The test suite has 167 tests across 6 test modules:
 | `test_render.py` | rich table and panel rendering for every response type |
 | `test_shell_flows.py` | end-to-end shell flows, validation retries, seed data, edge cases |
 
-Branch coverage is 99 percent with zero missing statements. CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 90 percent coverage threshold.
+Branch coverage is 99 percent with zero missing statements. CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 95 percent coverage threshold.
