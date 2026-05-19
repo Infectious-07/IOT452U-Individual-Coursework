@@ -387,17 +387,10 @@ class Portal:
     role: OrganisationRole
     title: str
     description: str = ""
-    _commands: list[Command] = field(default_factory=list)
+    commands: list[Command] = field(default_factory=list)
 
     def add(self, command: Command) -> None:
-        self._commands.append(command)
-
-    @property
-    def commands(self) -> Sequence[Command]:
-        return tuple(self._commands)
+        self.commands.append(command)
 
     def find(self, key: str) -> Command | None:
-        for command in self._commands:
-            if command.key == key:
-                return command
-        return None
+        return next((c for c in self.commands if c.key == key), None)
