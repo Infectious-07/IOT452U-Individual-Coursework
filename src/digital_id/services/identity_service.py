@@ -9,11 +9,7 @@ from ..domain.exceptions import InvalidTransitionError
 from ..domain.identity import (
     AuditAction,
     DigitalID,
-    DrivingEntitlement,
-    DrivingRestriction,
     IdentityStatus,
-    ResidencyStatus,
-    TaxBand,
     assert_allowed,
 )
 from ..domain.roles import OrganisationRole, require
