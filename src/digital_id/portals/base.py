@@ -18,6 +18,7 @@ class Argument:
     default: str | None = None
     validator: Validator | None = None
     options: tuple[str, ...] | None = None
+    multi_select: bool = False
 
 
 @dataclass(frozen=True)

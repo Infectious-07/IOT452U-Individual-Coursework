@@ -95,6 +95,12 @@ class MenuShell:
             self._run_command(portal, command)
 
     def _collect_argument(self, argument: Argument) -> str | None:
+        if argument.options and argument.multi_select:
+            option_choices = [Choice(opt, opt) for opt in argument.options]
+            selected = self._prompter.choose_many(argument.label, option_choices)
+            if selected is None:
+                return None
+            return ",".join(selected)
         if argument.options:
             option_choices = [Choice(opt, opt) for opt in argument.options]
             return self._prompter.choose(argument.label, option_choices)

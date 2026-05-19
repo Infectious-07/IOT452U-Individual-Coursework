@@ -19,6 +19,7 @@ class Separator:
 
 class Prompter(Protocol):
     def choose(self, title: str, choices: Sequence[Choice | Separator]) -> str | None: ...
+    def choose_many(self, title: str, choices: Sequence[Choice]) -> list[str] | None: ...
     def ask(self, message: str, default: str | None = None) -> str | None: ...
     def confirm(self, message: str, default: bool = False) -> bool: ...
 
@@ -53,6 +54,30 @@ class QuestionaryPrompter:
             instruction="(arrow keys to navigate, enter to select)",
         ).ask()
 
+    def choose_many(self, title: str, choices: Sequence[Choice]) -> list[str] | None:
+        import questionary
+        from prompt_toolkit.styles import Style
+
+        style = Style.from_dict({
+            "question": "bold",
+            "answer": "fg:ansicyan bold",
+            "pointer": "fg:ansicyan bold",
+            "highlighted": "fg:ansicyan bold underline",
+            "selected": "fg:ansigreen bold",
+            "instruction": "fg:ansigray italic",
+        })
+        question_choices = [
+            questionary.Choice(title=item.label, value=item.value)
+            for item in choices
+        ]
+        return questionary.checkbox(
+            title,
+            choices=question_choices,
+            style=style,
+            pointer="▶",
+            instruction="(space to toggle, enter to confirm)",
+        ).ask()
+
     def ask(self, message: str, default: str | None = None) -> str | None:
         import questionary
 
@@ -78,6 +103,9 @@ class ScriptedPrompter:
         return self.answers.pop(0)
 
     def choose(self, _title: str, _choices: Sequence[Choice | Separator]) -> str | None:
+        return self._pop()
+
+    def choose_many(self, _title: str, _choices: Sequence[Choice]) -> list[str] | None:
         return self._pop()
 
     def ask(self, _message: str, default: str | None = None) -> str | None:

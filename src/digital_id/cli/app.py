@@ -5,6 +5,7 @@ from collections.abc import Mapping
 
 from ..authorisation.roles import OrganisationRole
 from ..config.settings import Settings, load
+from ..domain.validators import generate_identity_id, generate_tax_reference
 from ..persistence.audit_repository import AuditRepository
 from ..persistence.database import bootstrap, connect
 from ..persistence.identity_repository import IdentityRepository
@@ -13,7 +14,7 @@ from ..portals.central_authority import build_central_portal
 from ..portals.consumer import build_dvla_portal, build_employer_portal, build_tax_portal
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
-from ..services.identity_service import IdentityService
+from ..services.identity_service import IdentityService, NewIdentity
 from ..services.stats_service import StatsService
 from ..services.verification import VerificationService
 from .shell import MenuShell
@@ -38,6 +39,75 @@ def build_portals(
     }
 
 
+_SAMPLE_PEOPLE = [
+    {
+        "name": "Ada Lovelace",
+        "dob": "1990-03-15",
+        "nationality": "GB",
+        "postcode": "SW1A 2AA",
+        "tax_band": "HIGHER",
+        "driving_entitlements": "B,C1",
+        "driving_restrictions": "GLASSES",
+        "right_to_work": True,
+        "residency_status": "CITIZEN",
+    },
+    {
+        "name": "Alan Turing",
+        "dob": "1985-06-23",
+        "nationality": "GB",
+        "postcode": "MK7 6AA",
+        "tax_band": "ADDITIONAL",
+        "driving_entitlements": "A,B",
+        "right_to_work": True,
+        "residency_status": "CITIZEN",
+    },
+    {
+        "name": "Grace Hopper",
+        "dob": "1992-12-09",
+        "nationality": "US",
+        "postcode": "EC2R 8AH",
+        "tax_band": "BASIC",
+        "driving_entitlements": "B",
+        "driving_restrictions": "AUTOMATIC_ONLY",
+        "right_to_work": True,
+        "residency_status": "RESIDENT",
+    },
+    {
+        "name": "Linus Torvalds",
+        "dob": "1988-12-28",
+        "nationality": "FI",
+        "postcode": "M1 1AE",
+        "tax_band": "HIGHER",
+        "driving_entitlements": "B,D1",
+        "right_to_work": True,
+        "residency_status": "TEMPORARY",
+    },
+    {
+        "name": "Tim Berners-Lee",
+        "dob": "1975-06-08",
+        "nationality": "GB",
+        "postcode": "OX1 3QD",
+        "tax_band": "ADDITIONAL",
+        "driving_entitlements": "A,B,C,C1",
+        "right_to_work": True,
+        "residency_status": "CITIZEN",
+    },
+]
+
+
+def _seed_sample_data(identity_service: IdentityService) -> None:
+    if identity_service.list_all():
+        return
+    role = OrganisationRole.CENTRAL_AUTHORITY
+    for person in _SAMPLE_PEOPLE:
+        payload = NewIdentity(
+            identity_id=generate_identity_id(),
+            tax_reference=generate_tax_reference(),
+            **person,
+        )
+        identity_service.create(role, payload)
+
+
 def run(settings: Settings | None = None) -> None:
     config = settings or load()
     connection: sqlite3.Connection = connect(config.database_path)
@@ -49,5 +119,6 @@ def run(settings: Settings | None = None) -> None:
     verification = VerificationService(identities, audit)
     exports = ExportService(identities, audit_repo)
     stats = StatsService(identities, audit_repo)
+    _seed_sample_data(identity_service)
     portals = build_portals(identity_service, audit, verification, exports, stats)
     MenuShell(portals).run()
