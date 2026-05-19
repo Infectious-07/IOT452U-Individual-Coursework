@@ -94,20 +94,18 @@ Each Digital ID carries the following attributes.
 
 ```
 src/
-  models.py       identity entity, enums, roles, exceptions, transitions, validators, portal types
-  database.py     SQLite schema, connection, identity and audit repositories
-  services.py    audit, identity lifecycle and stats services + NewIdentity input
-  verification.py role-scoped verification service + Tax/DVLA/Employer responses
-  exports.py      CSV export service for identities and audit log
-  portals.py      per organisation Command definitions wired to service handlers
-  render.py       rich Table builders for identities, audit, stats and responses
-  shell.py        prompter protocol, screen, menu shell
-  seed.py         sample data and idempotent first-run seeder
-  app.py          composition root: wires services, portals and shell
-  config.py       settings loader (reads config.toml with fallback defaults)
+  models.py    identity entity, enums, errors, validators, role table, portal types
+  database.py  SQLite schema, migrations, identity and audit repositories
+  services.py  audit, identity lifecycle, verification (+ responses), CSV export, stats
+  shell.py     styling and render helpers, prompter protocol, screen, menu shell
+  portals.py   per organisation Command definitions wired to service handlers
+  app.py       composition root, sample data seeding, entry point
+  config.py    settings loader (reads config.toml with fallback defaults)
 ```
 
-The codebase follows a layered dependency order. `models` has no project imports. `database` depends only on `models`. `services` depends on both. `verification`, `exports` and `render` consume the data types `services` exposes. `portals` composes services and rendering. `shell` and `seed` sit above that, and `app` is the composition root. The layering keeps business rules testable without infrastructure and stops UI or storage changes from rippling through unrelated code.
+Seven flat modules in `src/`, each with a clear single concern. The codebase follows a strict dependency order: `models` has no project imports, `database` depends only on `models`, `services` depends on both, `shell` consumes the response types from `services`, `portals` wires services and renderers into commands, and `app` is the composition root. The layering keeps business rules testable without infrastructure and stops UI or storage changes from rippling through unrelated code.
+
+Each non-trivial module is internally divided with `# --- section ---` comments so individual concerns (e.g. audit service, identity service, verification service, export service, stats service inside `services.py`; styling, render tables, prompter, screen, menu shell inside `shell.py`) are easy to navigate.
 
 Lifecycle operations live in `IdentityService` and only accept the central authority role. Verification logic lives in `VerificationService` and returns a different response type per consumer role. Portals describe their commands as data: each `Command` lists its `Argument` set and an optional confirmation message. The shell drives the prompts and renders results as rich tables.
 
@@ -152,7 +150,7 @@ Verification follows the same path but the service returns a role-scoped respons
 
 **Append-only audit log.** Every lifecycle action and every verification request writes an `AuditEvent`. The audit repository has no update or delete methods, so history cannot be tampered with. Tax verification reuses this log as the source of truth for historical status (see Domain rules).
 
-**Layered module layout with a strict dependency rule.** Eleven flat modules in `src/`, each only importing from modules earlier in the dependency chain. This makes the build order obvious, prevents circular imports and keeps the project navigable without nested packages.
+**Flat module layout with a strict dependency rule.** Seven modules in `src/`, each only importing from modules earlier in the dependency chain. Each module groups related concerns under `# --- section ---` markers rather than splitting into more files. This keeps the build order obvious, prevents circular imports and keeps the project navigable.
 
 **Error hierarchy rooted in DigitalIdError.** Every domain error inherits from one base class. The shell catches `DigitalIdError` to show a user-friendly message, while `ValueError` and unexpected exceptions propagate separately. This keeps error handling predictable without broad except clauses.
 

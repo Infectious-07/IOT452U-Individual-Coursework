@@ -5,18 +5,17 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-from app import build_portals
+from app import build_portals, seed_sample_data
 from database import AuditRepository, IdentityRepository, bootstrap, connect
-from exports import ExportService
 from models import Command, OrganisationRole, Portal
-from seed import seed_sample_data
 from services import (
     AuditService,
+    ExportService,
     IdentityService,
     StatsService,
+    VerificationService,
 )
 from shell import _EXIT, MenuShell, Screen, ScriptedPrompter
-from verification import VerificationService
 
 GENERATED_ID = "DID-00000001"
 

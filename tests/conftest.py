@@ -9,8 +9,7 @@ import pytest
 
 from database import AuditRepository, IdentityRepository, bootstrap, connect
 from models import DigitalID, IdentityStatus, OrganisationRole, ResidencyStatus
-from services import AuditService, IdentityService, NewIdentity
-from verification import VerificationService
+from services import AuditService, IdentityService, NewIdentity, VerificationService
 
 
 def _stepping_clock(start: datetime) -> Callable[[], datetime]:
