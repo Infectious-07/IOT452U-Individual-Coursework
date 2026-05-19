@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol
 
 from rich import box
@@ -115,7 +116,7 @@ class QuestionaryPrompter:  # pragma: no cover
 class ScriptedPrompter:
     answers: list
 
-    def __init__(self, answers: Sequence) -> None:
+    def __init__(self, answers: Sequence[object]) -> None:
         self.answers = list(answers)
 
     def _pop(self) -> object:
@@ -250,7 +251,7 @@ class Screen:
 # --- render helpers ---
 
 
-def _codes(codes: frozenset) -> str:
+def _codes(codes: frozenset[StrEnum]) -> str:
     return ", ".join(sorted(code.value for code in codes)) or "-"
 
 

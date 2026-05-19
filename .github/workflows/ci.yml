@@ -30,7 +30,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           coverage run -m pytest
-          coverage report --fail-under=95
+          coverage report --fail-under=98
           coverage xml
 
       - name: Upload coverage report

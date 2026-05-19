@@ -8,13 +8,23 @@ A console backend that lets a central authority manage Digital IDs while authori
 
 ## Running
 
+Install the project and start the shell:
+
 ```
 python -m pip install -r requirements-dev.txt
 python -m pip install -e .
+digital-id
+```
+
+If you prefer not to install the project, you can run it directly:
+
+```
 python src/app.py
 ```
 
 The shell clears the screen and shows an ASCII art banner followed by an arrow key portal menu. After selecting a portal you pick a command from another arrow key menu. Each command then asks for its arguments one at a time. Destructive actions such as revoke and suspend prompt for confirmation before they run.
+
+On first run the system seeds five sample Digital IDs (Ada Lovelace, Alan Turing, Grace Hopper, Linus Torvalds, Tim Berners-Lee) so consumer portals have something to verify. Choose **Central Authority -> List Digital IDs** to see them.
 
 A `config.toml` at the working directory is read on start up. If absent, the defaults below are used.
 
@@ -111,7 +121,7 @@ Verification follows the same path but the service returns a role-scoped respons
 
 **Role-based authorisation at the service boundary.** Every service method calls `require(actor, action)` as its first line. The permission map is a plain dictionary in `models.py`. Consumer portals additionally check the exact role before calling verification, so a tax actor can never call the employer endpoint.
 
-**Append-only audit log.** Every lifecycle action and every verification request writes an `AuditEvent`. The audit repository has no update or delete methods. Tax verification replays the audit log to detect suspensions within a reporting period, including suspensions that started before the window.
+**Append-only audit log.** Every lifecycle action and every verification request writes an `AuditEvent`. The audit repository has no update or delete methods, so history cannot be tampered with. Tax verification reuses this log as the source of truth for historical status (see Domain rules).
 
 **Flat module layout with a strict dependency rule.** Seven modules in a single package, each only importing from modules earlier in the dependency chain: `models` (zero project imports), `database`, `services`, `shell`, `portals`, `app`, `config`. This makes the build order obvious, prevents circular imports and keeps the project navigable without nested packages.
 
@@ -122,18 +132,21 @@ Verification follows the same path but the service returns a role-scoped respons
 Status transitions follow a strict state machine.
 
 ```
-          suspend          revoke
- ACTIVE ---------> SUSPENDED ---------> REVOKED
-    |                  |                  (terminal)
-    |   reactivate     |
-    |  <----------     |
-    |                  |
-    +--- revoke -----------------------> REVOKED
+                suspend
+        +---------------------+
+        |                     v
+     ACTIVE                SUSPENDED
+        ^                     |
+        +---------------------+
+              reactivate
+
+     ACTIVE  --- revoke --->  REVOKED  (terminal)
+   SUSPENDED --- revoke --->  REVOKED  (terminal)
 ```
 
 - A revoked Digital ID is terminal. Updates and further transitions are rejected.
 - Suspend, revoke and reactivate are idempotent when the identity is already in the target state.
-- Tax verification uses event replay to determine whether the identity was suspended at any point during the reporting period, including suspensions that began before the period started. This is a lightweight form of event sourcing: the audit log is the source of truth for historical status.
+- Tax verification uses event replay over the audit log to determine whether the identity was suspended at any point during the reporting period, including suspensions that began before the period started.
 - Each verification response carries only the attributes its role is entitled to see. When an identity is inactive the response hides sensitive fields.
 - All input is validated at the service boundary. Validators normalise casing and whitespace before checking format against compiled regex patterns.
 - SQL queries use parameterised statements throughout to prevent injection.

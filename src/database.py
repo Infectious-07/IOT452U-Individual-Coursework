@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import date, datetime
+from enum import StrEnum
 from pathlib import Path
 
 from models import (
@@ -97,13 +98,13 @@ def bootstrap(connection: sqlite3.Connection) -> None:
 # --- identity repository ---
 
 
-def _split_codes(value: str | None, enum_cls: type) -> frozenset:
+def _split_codes(value: str | None, enum_cls: type[StrEnum]) -> frozenset[StrEnum]:
     if not value:
         return frozenset()
     return frozenset(enum_cls(piece) for piece in value.split(",") if piece)
 
 
-def _join_codes(codes: frozenset) -> str:
+def _join_codes(codes: frozenset[StrEnum]) -> str:
     return ",".join(sorted(code.value for code in codes))
 
 
@@ -126,7 +127,7 @@ def _row_to_identity(row: sqlite3.Row) -> DigitalID:
     )
 
 
-def _identity_row(identity: DigitalID) -> tuple:
+def _identity_row(identity: DigitalID) -> tuple[object, ...]:
     return (
         identity.id,
         identity.name,
