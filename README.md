@@ -113,12 +113,30 @@ Verification follows the same path but the service returns a role-scoped respons
 
 **Append-only audit log.** Every lifecycle action and every verification request writes an `AuditEvent`. The audit repository has no update or delete methods. Tax verification replays the audit log to detect suspensions within a reporting period, including suspensions that started before the window.
 
+**Flat module layout with a strict dependency rule.** Seven modules in a single package, each only importing from modules earlier in the dependency chain: `models` (zero project imports), `database`, `services`, `shell`, `portals`, `app`, `config`. This makes the build order obvious, prevents circular imports and keeps the project navigable without nested packages.
+
+**Error hierarchy rooted in DigitalIdError.** Every domain error inherits from one base class. The shell catches `DigitalIdError` to show a user-friendly message, while `ValueError` and unexpected exceptions propagate separately. This keeps error handling predictable without broad except clauses.
+
 ## Domain rules
+
+Status transitions follow a strict state machine.
+
+```
+          suspend          revoke
+ ACTIVE ---------> SUSPENDED ---------> REVOKED
+    |                  |                  (terminal)
+    |   reactivate     |
+    |  <----------     |
+    |                  |
+    +--- revoke -----------------------> REVOKED
+```
 
 - A revoked Digital ID is terminal. Updates and further transitions are rejected.
 - Suspend, revoke and reactivate are idempotent when the identity is already in the target state.
-- Tax verification replays the audit log to determine whether the identity was suspended at any point during the reporting period, including suspensions that began before the period started.
-- Each verification response carries only the attributes its role is entitled to see.
+- Tax verification uses event replay to determine whether the identity was suspended at any point during the reporting period, including suspensions that began before the period started. This is a lightweight form of event sourcing: the audit log is the source of truth for historical status.
+- Each verification response carries only the attributes its role is entitled to see. When an identity is inactive the response hides sensitive fields.
+- All input is validated at the service boundary. Validators normalise casing and whitespace before checking format against compiled regex patterns.
+- SQL queries use parameterised statements throughout to prevent injection.
 
 ## Tests and lint
 
