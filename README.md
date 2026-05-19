@@ -1,10 +1,15 @@
 # Digital ID Platform
 
 ![CI](https://github.com/Infectious-07/IOT452U-Individual-Coursework/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)
+![Python](https://img.shields.io/badge/python-3.14-blue)
+![License](https://img.shields.io/badge/license-coursework-lightgrey)
 
 Repository: https://github.com/Infectious-07/IOT452U-Individual-Coursework
 
 A console backend that lets a central authority manage Digital IDs while authorised consumer organisations verify them through dedicated portals. Built for the IOT452U Individual Coursework. The runtime uses Python 3.14 with questionary and rich for the terminal interface; pytest, coverage and ruff are used during development.
+
+**Why Python.** Python's standard library covers everything the brief needs (sqlite3 for persistence, tomllib for config, dataclasses for immutable entities, StrEnum for type-safe constants) so the project stays free of large application frameworks, as the brief requires. Dynamic typing was disciplined with type hints throughout, parameterised generics, frozen dataclasses and ruff's lint rules.
 
 ## Running
 
@@ -34,6 +39,23 @@ path = "data/digital_id.sqlite"
 ```
 
 The path is resolved relative to the directory you launch from. Running from the project root keeps the SQLite file at `data/digital_id.sqlite` next to the source tree.
+
+## Quick demo walkthrough
+
+A typical session that exercises every layer:
+
+1. **Launch the shell** with `digital-id`. The banner appears followed by the portal menu.
+2. **Central Authority -> List Digital IDs** — confirms five sample identities exist.
+3. **Central Authority -> Create a Digital ID** — type a name, dob (1990-01-15), nationality (GB), postcode (SW1A 2AA). The shell prints the generated `DID-XXXXXXXX`.
+4. **Central Authority -> Update tax details** — paste the generated id, set tax_reference and band.
+5. **Tax Authority -> Verify for a reporting period** — paste the id, period 2026-01-01 to 2026-12-31. The tax response shows reference and band.
+6. **Central Authority -> Suspend an ID** — paste the id, confirm. The response shows status SUSPENDED.
+7. **DVLA -> Verify for licensing** — paste the id. `active_now` is `no`, `restricted_now` is `yes`.
+8. **Central Authority -> Show history** — paste the id. The audit table shows CREATE, UPDATE, SUSPEND, VERIFY in order.
+9. **Central Authority -> Revoke an ID** — paste the id, confirm. Status becomes REVOKED.
+10. **Central Authority -> Update name** — try to update the revoked id. The shell rejects with a clear error and the state machine remains consistent.
+
+Every step exercises a different responsibility: lifecycle management, role-scoped verification, audit replay, and deterministic rejection of conflicting operations.
 
 ## Portals
 
@@ -172,4 +194,20 @@ The test suite has 167 tests across 6 test modules:
 | `test_render.py` | rich table and panel rendering for every response type |
 | `test_shell_flows.py` | end-to-end shell flows, validation retries, seed data, edge cases |
 
-Branch coverage is 99 percent with zero missing statements. CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 95 percent coverage threshold.
+Branch coverage is 99 percent with zero missing statements. CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 98 percent coverage threshold.
+
+## Development methodology
+
+Work was organised into five sprints tracked on GitHub Issues and Milestones, in a Scrum-style cadence:
+
+| sprint | theme |
+| --- | --- |
+| Sprint 1: Foundations | Project skeleton, CI pipeline, domain model |
+| Sprint 2: Persistence | SQLite schema, repositories, lifecycle service |
+| Sprint 3: Authorisation | Role permissions, verification per consumer |
+| Sprint 4: CLI | Portals, shell, render layer, config |
+| Sprint 5: Polish | Test consolidation, schema extensions, CLI refinement |
+
+Each issue carries a label (`feature`, `refactor`, `testing`, `documentation`, `infrastructure`) and a milestone. The commit history shows incremental progress and traceability between issues and code changes.
+
+The project covers the relevant apprenticeship KSBs: K21 (lifecycle stages), K22 (unit testing, programming, architecture), K23 (Scrum-style sprints), K24 (functional, non-functional and security requirements), K26 (selecting and applying tooling), K28 (Git as configuration management), S17, S19, S21 and S22 (recommending, implementing, refining and evaluating an engineering solution).
