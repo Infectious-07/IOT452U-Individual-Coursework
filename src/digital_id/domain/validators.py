@@ -58,12 +58,15 @@ def validate_nationality(value: str) -> str:
     return cleaned
 
 
-def validate_address(value: str) -> str:
-    cleaned = (value or "").strip()
+_POSTCODE_PATTERN = re.compile(r"^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$")
+
+
+def validate_postcode(value: str) -> str:
+    cleaned = (value or "").strip().upper()
     if not cleaned:
-        raise ValidationError("address", "cannot be empty")
-    if len(cleaned) > 200:
-        raise ValidationError("address", "must be 200 characters or fewer")
+        raise ValidationError("postcode", "cannot be empty")
+    if not _POSTCODE_PATTERN.fullmatch(cleaned):
+        raise ValidationError("postcode", "must be a valid UK postcode (e.g. SW1A 2AA)")
     return cleaned
 
 

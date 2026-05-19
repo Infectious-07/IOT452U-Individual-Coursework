@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS identities (
     dob TEXT NOT NULL,
     status TEXT NOT NULL,
     nationality TEXT NOT NULL DEFAULT '',
-    address TEXT NOT NULL DEFAULT '',
+    postcode TEXT NOT NULL DEFAULT '',
     tax_reference TEXT,
     tax_band TEXT,
     driving_entitlements TEXT NOT NULL DEFAULT '',
@@ -41,7 +41,7 @@ AUDIT_INDEX = (
 # adds them to existing databases so older deployments keep working
 _IDENTITY_LATER_COLUMNS = [
     ("nationality", "TEXT NOT NULL DEFAULT ''"),
-    ("address", "TEXT NOT NULL DEFAULT ''"),
+    ("postcode", "TEXT NOT NULL DEFAULT ''"),
     ("tax_reference", "TEXT"),
     ("tax_band", "TEXT"),
     ("driving_entitlements", "TEXT NOT NULL DEFAULT ''"),

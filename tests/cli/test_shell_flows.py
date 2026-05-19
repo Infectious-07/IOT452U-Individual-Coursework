@@ -24,7 +24,7 @@ BASE_CREATE = [
     "Ada Lovelace",
     "1990-05-01",
     "GB",
-    "10 Downing Street, London",
+    "SW1A 2AA",
 ]
 
 
@@ -256,7 +256,7 @@ def test_invalid_input_retries_then_succeeds(shell_setup) -> None:
             "Ada Lovelace",
             "1990-05-01",
             "GB",
-            "10 Downing Street, London",
+            "SW1A 2AA",
             "show",
             GENERATED_ID,
             "__back__",
@@ -280,7 +280,7 @@ def test_invalid_date_is_caught_at_prompt(shell_setup) -> None:
             "also-bad",
             "1990-05-01",
             "GB",
-            "10 Downing Street, London",
+            "SW1A 2AA",
             "__back__",
             _EXIT,
         ],

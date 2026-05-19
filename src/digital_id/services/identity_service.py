@@ -18,13 +18,13 @@ from ..domain.identity import (
 )
 from ..domain.transitions import assert_allowed
 from ..domain.validators import (
-    validate_address,
     validate_dob,
     validate_driving_entitlements,
     validate_driving_restrictions,
     validate_identity_id,
     validate_name,
     validate_nationality,
+    validate_postcode,
     validate_residency_status,
     validate_tax_band,
     validate_tax_reference,
@@ -39,7 +39,7 @@ class NewIdentity:
     name: str
     dob: str
     nationality: str
-    address: str
+    postcode: str
     tax_reference: str | None = None
     tax_band: str | None = None
     driving_entitlements: str | list[str] = ""
@@ -66,7 +66,7 @@ class IdentityService:
             name=validate_name(payload.name),
             dob=validate_dob(payload.dob),
             nationality=validate_nationality(payload.nationality),
-            address=validate_address(payload.address),
+            postcode=validate_postcode(payload.postcode),
             status=IdentityStatus.ACTIVE,
             tax_reference=validate_tax_reference(payload.tax_reference),
             tax_band=validate_tax_band(payload.tax_band),
@@ -111,24 +111,24 @@ class IdentityService:
         )
         return updated
 
-    def update_address(
+    def update_postcode(
         self,
         actor: OrganisationRole,
         identity_id: str,
-        new_address: str,
+        new_postcode: str,
     ) -> DigitalID:
         require(actor, "update")
-        clean = validate_address(new_address)
+        clean = validate_postcode(new_postcode)
         current = self._fetch_mutable(identity_id, "update")
-        if current.address == clean:
+        if current.postcode == clean:
             return current
-        updated = current.with_address(clean, self._clock())
+        updated = current.with_postcode(clean, self._clock())
         self._identities.update(updated)
         self._audit.record(
             actor,
             AuditAction.UPDATE,
             updated.id,
-            {"field": "address"},
+            {"field": "postcode"},
         )
         return updated
 

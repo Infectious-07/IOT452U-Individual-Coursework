@@ -21,13 +21,13 @@ from digital_id.domain.identity import (
 )
 from digital_id.domain.transitions import assert_allowed, is_allowed
 from digital_id.domain.validators import (
-    validate_address,
     validate_dob,
     validate_driving_entitlements,
     validate_driving_restrictions,
     validate_identity_id,
     validate_name,
     validate_nationality,
+    validate_postcode,
     validate_residency_status,
     validate_tax_band,
     validate_tax_reference,
@@ -146,12 +146,14 @@ def test_nationality_validates() -> None:
         validate_nationality("GBR")
 
 
-def test_address_validates() -> None:
-    assert validate_address("  10 Downing Street  ") == "10 Downing Street"
+def test_postcode_validates() -> None:
+    assert validate_postcode("sw1a 2aa") == "SW1A 2AA"
+    assert validate_postcode("M1 1AE") == "M1 1AE"
+    assert validate_postcode("EC2R8AH") == "EC2R8AH"
     with pytest.raises(ValidationError):
-        validate_address("   ")
+        validate_postcode("   ")
     with pytest.raises(ValidationError):
-        validate_address("x" * 201)
+        validate_postcode("INVALID")
 
 
 def test_tax_reference_validates() -> None:

@@ -49,7 +49,7 @@ class DigitalID:
     name: str
     dob: date
     nationality: str
-    address: str
+    postcode: str
     status: IdentityStatus
     created_at: datetime
     updated_at: datetime
@@ -66,8 +66,8 @@ class DigitalID:
     def with_status(self, new_status: IdentityStatus, now: datetime) -> DigitalID:
         return replace(self, status=new_status, updated_at=now)
 
-    def with_address(self, new_address: str, now: datetime) -> DigitalID:
-        return replace(self, address=new_address, updated_at=now)
+    def with_postcode(self, new_postcode: str, now: datetime) -> DigitalID:
+        return replace(self, postcode=new_postcode, updated_at=now)
 
     def with_tax_details(
         self,

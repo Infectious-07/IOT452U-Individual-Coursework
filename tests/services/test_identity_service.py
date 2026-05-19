@@ -48,11 +48,11 @@ def test_update_name_writes_new_value(wired) -> None:
     assert updated.name == "Ada L."
 
 
-def test_update_address(wired) -> None:
+def test_update_postcode(wired) -> None:
     identity_service, *_ = wired
     identity_service.create(CENTRAL, make_new_identity())
-    updated = identity_service.update_address(CENTRAL, "ID-001", "Bletchley Park")
-    assert updated.address == "Bletchley Park"
+    updated = identity_service.update_postcode(CENTRAL, "ID-001", "MK3 6EB")
+    assert updated.postcode == "MK3 6EB"
 
 
 def test_update_tax_details(wired) -> None:

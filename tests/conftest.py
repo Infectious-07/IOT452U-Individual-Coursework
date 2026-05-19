@@ -34,7 +34,7 @@ def make_new_identity(
     name: str = "Ada Lovelace",
     dob: str = "1990-05-01",
     nationality: str = "GB",
-    address: str = "10 Downing Street, London",
+    postcode: str = "SW1A 2AA",
     **overrides,
 ) -> NewIdentity:
     base = {
@@ -42,7 +42,7 @@ def make_new_identity(
         "name": name,
         "dob": dob,
         "nationality": nationality,
-        "address": address,
+        "postcode": postcode,
     }
     base.update(overrides)
     return NewIdentity(**base)
@@ -55,7 +55,7 @@ def make_sample_identity(identity_id: str = "ID-001") -> DigitalID:
         name="Ada Lovelace",
         dob=datetime(1990, 5, 1).date(),
         nationality="GB",
-        address="10 Downing Street, London",
+        postcode="SW1A 2AA",
         status=IdentityStatus.ACTIVE,
         created_at=now,
         updated_at=now,

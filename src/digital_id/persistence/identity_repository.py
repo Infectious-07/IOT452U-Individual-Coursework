@@ -31,7 +31,7 @@ def _row_to_identity(row: sqlite3.Row) -> DigitalID:
         dob=date.fromisoformat(row["dob"]),
         status=IdentityStatus(row["status"]),
         nationality=row["nationality"],
-        address=row["address"],
+        postcode=row["postcode"],
         tax_reference=row["tax_reference"],
         tax_band=TaxBand(row["tax_band"]) if row["tax_band"] else None,
         driving_entitlements=_split_codes(row["driving_entitlements"], DrivingEntitlement),
@@ -50,7 +50,7 @@ def _identity_row(identity: DigitalID) -> tuple:
         identity.dob.isoformat(),
         identity.status.value,
         identity.nationality,
-        identity.address,
+        identity.postcode,
         identity.tax_reference,
         identity.tax_band.value if identity.tax_band else None,
         _join_codes(identity.driving_entitlements),
@@ -64,14 +64,14 @@ def _identity_row(identity: DigitalID) -> tuple:
 
 _INSERT_SQL = (
     "INSERT INTO identities ("
-    "id, name, dob, status, nationality, address, tax_reference, tax_band, "
+    "id, name, dob, status, nationality, postcode, tax_reference, tax_band, "
     "driving_entitlements, driving_restrictions, right_to_work, residency_status, "
     "created_at, updated_at"
     ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 
 _UPDATE_SQL = (
-    "UPDATE identities SET name = ?, status = ?, address = ?, tax_reference = ?, "
+    "UPDATE identities SET name = ?, status = ?, postcode = ?, tax_reference = ?, "
     "tax_band = ?, driving_entitlements = ?, driving_restrictions = ?, "
     "right_to_work = ?, residency_status = ?, updated_at = ? WHERE id = ?"
 )
@@ -109,7 +109,7 @@ class IdentityRepository:
                 (
                     identity.name,
                     identity.status.value,
-                    identity.address,
+                    identity.postcode,
                     identity.tax_reference,
                     identity.tax_band.value if identity.tax_band else None,
                     _join_codes(identity.driving_entitlements),

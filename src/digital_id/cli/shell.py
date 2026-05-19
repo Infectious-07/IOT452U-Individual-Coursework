@@ -12,6 +12,13 @@ _BACK = "__back__"
 _EXIT = "__exit__"
 _MAX_ATTEMPTS = 3
 
+GROUP_PREFIX = {
+    "Records": "●",
+    "Updates": "◆",
+    "Lifecycle": "▲",
+    "Reports": "■",
+}
+
 
 class MenuShell:
     def __init__(
@@ -61,17 +68,14 @@ class MenuShell:
             self._screen.clear()
             self._screen.header(portal.title, "Commands")
             choices: list[Choice | Separator] = []
-            last_group = ""
             for command in portal.commands:
-                if command.group and command.group != last_group:
-                    choices.append(Separator(f"  {command.group}"))
-                    last_group = command.group
+                prefix = GROUP_PREFIX.get(command.group, " ")
                 choices.append(
-                    Choice(command.label, command.key, command.description)
+                    Choice(f"{prefix} {command.label}", command.key, command.description)
                 )
             choices.append(Separator())
-            choices.append(Choice("Back to portals", _BACK))
-            choices.append(Choice("Exit", _EXIT))
+            choices.append(Choice("  Back to portals", _BACK))
+            choices.append(Choice("  Exit", _EXIT))
             choice = self._prompter.choose(f"{portal.title}", choices)
             if choice is None or choice == _BACK:
                 self._screen.clear()

@@ -46,7 +46,7 @@ def identity_panel(identity: DigitalID) -> Table:
     table.add_row("name", identity.name)
     table.add_row("dob", identity.dob.isoformat())
     table.add_row("nationality", identity.nationality)
-    table.add_row("address", identity.address)
+    table.add_row("postcode", identity.postcode)
     table.add_row(
         "status",
         f"[{colour_status(identity.status)}]{identity.status.value}[/]",

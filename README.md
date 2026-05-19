@@ -46,7 +46,7 @@ Each Digital ID carries the following attributes.
 | name | central authority | central authority |
 | dob | central authority on create | central authority |
 | nationality | central authority on create | central authority |
-| address | central authority | central authority |
+| postcode | central authority | central authority |
 | status | central authority via suspend, revoke, reactivate | every portal as a yes or no |
 | tax_reference | central authority via update tax | tax |
 | tax_band | central authority via update tax | tax |

@@ -16,13 +16,13 @@ from ..cli.render import (
 from ..domain.exceptions import ValidationError
 from ..domain.validators import (
     generate_identity_id,
-    validate_address,
     validate_dob,
     validate_driving_entitlements,
     validate_driving_restrictions,
     validate_identity_id,
     validate_name,
     validate_nationality,
+    validate_postcode,
     validate_residency_status,
     validate_tax_band,
     validate_tax_reference,
@@ -63,7 +63,7 @@ def build_central_portal(
             name=args["name"],
             dob=args["dob"],
             nationality=args["nationality"],
-            address=args["address"],
+            postcode=args["postcode"],
         )
         identity = identity_service.create(ROLE, payload)
         notice = Panel(
@@ -79,9 +79,9 @@ def build_central_portal(
             identity_service.update_name(ROLE, args["identity_id"], args["name"])
         )
 
-    def update_address(args: Mapping[str, str]):
+    def update_postcode(args: Mapping[str, str]):
         return identity_panel(
-            identity_service.update_address(ROLE, args["identity_id"], args["address"])
+            identity_service.update_postcode(ROLE, args["identity_id"], args["postcode"])
         )
 
     def update_tax(args: Mapping[str, str]):
@@ -161,7 +161,7 @@ def build_central_portal(
                 Argument("name", "Full name", validator=validate_name),
                 Argument("dob", "Date of birth (YYYY-MM-DD)", validator=validate_dob),
                 Argument("nationality", "Nationality (ISO 3166 alpha-2)", default="GB", validator=validate_nationality),
-                Argument("address", "Address", validator=validate_address),
+                Argument("postcode", "Postcode (e.g. SW1A 2AA)", validator=validate_postcode),
             ),
             create,
             group="Records",
@@ -181,11 +181,11 @@ def build_central_portal(
     )
     portal.add(
         Command(
-            "update_address",
-            "Update address",
-            "Change the registered address",
-            (_id, Argument("address", "New address", validator=validate_address)),
-            update_address,
+            "update_postcode",
+            "Update postcode",
+            "Change the registered postcode",
+            (_id, Argument("postcode", "New postcode (e.g. SW1A 2AA)", validator=validate_postcode)),
+            update_postcode,
             group="Updates",
         )
     )
