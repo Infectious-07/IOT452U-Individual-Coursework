@@ -13,11 +13,10 @@ A console backend that lets a central authority manage Digital IDs while authori
 
 ## Running
 
-Install the project and start the shell:
+Install the project (with development tools) and start the shell:
 
 ```
-python -m pip install -r requirements-dev.txt
-python -m pip install -e .
+python -m pip install -e ".[dev]"
 digital-id
 ```
 
@@ -26,6 +25,8 @@ If you prefer not to install the project, you can run it directly:
 ```
 python src/app.py
 ```
+
+The `[dev]` extra brings in pytest, coverage and ruff. Runtime-only installs can omit it: `pip install -e .`.
 
 The shell clears the screen and shows an ASCII art banner followed by an arrow key portal menu. After selecting a portal you pick a command from another arrow key menu. Each command then asks for its arguments one at a time. Destructive actions such as revoke and suspend prompt for confirmation before they run.
 
