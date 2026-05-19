@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from rich.console import Console
 from rich.panel import Panel
+from rich.rule import Rule
 from rich.text import Text
+
+BANNER = r"""
+  ____  _       _ _        _   ___ ____
+ |  _ \(_) __ _(_) |_ __ _| | |_ _|  _ \
+ | | | | |/ _` | | __/ _` | |  | || | | |
+ | |_| | | (_| | | || (_| | |  | || |_| |
+ |____/|_|\__, |_|\__\__,_|_| |___|____/
+          |___/
+"""
 
 
 class Screen:
@@ -12,13 +22,28 @@ class Screen:
     def clear(self) -> None:
         self._console.clear()
 
+    def banner(self) -> None:
+        self._console.print(
+            Panel(
+                Text(BANNER, style="bold cyan", justify="center"),
+                title="[bold white]Identity Management Platform[/]",
+                subtitle="[dim]v1.0.0[/]",
+                border_style="cyan",
+                padding=(0, 2),
+            )
+        )
+
     def header(self, portal_title: str | None, breadcrumb: str | None = None) -> None:
-        title = Text("Digital ID Platform", style="bold white on blue")
+        parts: list[str] = []
         if portal_title:
-            title.append(Text(f"  ::  {portal_title}", style="white on blue"))
+            parts.append(f"[bold white]{portal_title}[/]")
         if breadcrumb:
-            title.append(Text(f"  >  {breadcrumb}", style="bold yellow on blue"))
-        self._console.print(Panel(title, border_style="blue", padding=(0, 1)))
+            parts.append(f"[bold yellow]{breadcrumb}[/]")
+        label = "  >  ".join(parts) if parts else "[bold white]Digital ID Platform[/]"
+        self._console.print(Panel(label, border_style="blue", padding=(0, 1)))
+
+    def rule(self, label: str = "") -> None:
+        self._console.print(Rule(label, style="dim"))
 
     def info(self, message: str) -> None:
         self._console.print(message)
@@ -32,8 +57,17 @@ class Screen:
     def error(self, message: str) -> None:
         self._console.print(f"[bold red]{message}[/]")
 
+    def goodbye(self) -> None:
+        self._console.print()
+        self._console.print(
+            Panel(
+                "[bold cyan]Thank you for using the Digital ID Platform.[/]",
+                border_style="cyan",
+                padding=(0, 2),
+            )
+        )
+
     def pause(self) -> None:
-        # rich console makes this trivial cross platform
         self._console.input("[dim]press enter to continue[/]")
 
     @property

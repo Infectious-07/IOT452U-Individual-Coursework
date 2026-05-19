@@ -8,7 +8,6 @@ from ..portals.base import Portal
 from .prompter import Choice, Prompter, QuestionaryPrompter
 from .screen import Screen
 
-# special return values for the menu loop
 _BACK = "__back__"
 _EXIT = "__exit__"
 
@@ -27,11 +26,13 @@ class MenuShell:
         self._pause = pause_between_actions
 
     def run(self) -> None:
+        self._screen.clear()
+        self._screen.banner()
         while True:
             choice = self._pick_portal()
             if choice is None or choice == _EXIT:
                 self._screen.clear()
-                self._screen.info("Goodbye.")
+                self._screen.goodbye()
                 return
             portal = self._portal_by_role(choice)
             if portal is None:
@@ -39,14 +40,13 @@ class MenuShell:
             self._portal_loop(portal)
 
     def _pick_portal(self) -> str | None:
-        self._screen.clear()
-        self._screen.header(None, "Portal selection")
+        self._screen.rule("Select a portal")
         choices = [
             Choice(portal.title, portal.role.value, portal.description)
             for portal in self._portals
         ]
         choices.append(Choice("Exit", _EXIT))
-        return self._prompter.choose("Pick a portal", choices)
+        return self._prompter.choose("Portal", choices)
 
     def _portal_by_role(self, role_value: str) -> Portal | None:
         for portal in self._portals:
@@ -57,19 +57,21 @@ class MenuShell:
     def _portal_loop(self, portal: Portal) -> None:
         while True:
             self._screen.clear()
-            self._screen.header(portal.title, "Pick a command")
+            self._screen.header(portal.title, "Commands")
             choices = [
                 Choice(command.label, command.key, command.description)
                 for command in portal.commands
             ]
             choices.append(Choice("Back to portals", _BACK))
             choices.append(Choice("Exit", _EXIT))
-            choice = self._prompter.choose(f"{portal.title} commands", choices)
+            choice = self._prompter.choose(f"{portal.title}", choices)
             if choice is None or choice == _BACK:
+                self._screen.clear()
+                self._screen.banner()
                 return
             if choice == _EXIT:
                 self._screen.clear()
-                self._screen.info("Goodbye.")
+                self._screen.goodbye()
                 raise SystemExit(0)
             command = portal.find(choice)
             if command is None:
@@ -83,7 +85,6 @@ class MenuShell:
         for argument in command.arguments:
             value = self._prompter.ask(argument.label, default=argument.default)
             if value is None:
-                # the user cancelled; abort the command without writing anything
                 return
             args[argument.key] = value
         if command.confirmation is not None and not self._prompter.confirm(
@@ -104,6 +105,7 @@ class MenuShell:
             return
         if result is not None:
             self._screen.console.print(result)
+        self._screen.rule()
         self._after_action()
 
     def _after_action(self) -> None:
