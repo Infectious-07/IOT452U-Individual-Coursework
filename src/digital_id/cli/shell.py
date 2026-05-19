@@ -104,7 +104,9 @@ class MenuShell:
             self._after_action()
             return
         if result is not None:
+            self._screen.console.print()
             self._screen.console.print(result)
+            self._screen.console.print()
         self._screen.rule()
         self._after_action()
 

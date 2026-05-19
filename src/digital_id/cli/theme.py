@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from ..domain.identity import IdentityStatus
 
-# colour names follow rich's standard markup so they render across platforms
 STATUS_COLOUR = {
     IdentityStatus.ACTIVE: "bold green",
     IdentityStatus.SUSPENDED: "bold yellow",
@@ -10,11 +9,14 @@ STATUS_COLOUR = {
 }
 
 ACCENT = "bold cyan"
-MUTED = "grey50"
-HEADER_BG = "on blue"
-ERROR = "bold red"
+ACCENT2 = "bold magenta"
+MUTED = "dim"
+HEADER_STYLE = "bold white"
+BORDER = "bright_cyan"
+BORDER_DIM = "cyan"
 SUCCESS = "bold green"
 WARNING = "bold yellow"
+ERROR = "bold red"
 
 
 def colour_status(status: IdentityStatus) -> str:

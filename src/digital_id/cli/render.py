@@ -2,22 +2,47 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from rich import box
 from rich.table import Table
 
 from ..domain.audit import AuditEvent
 from ..domain.identity import DigitalID
 from ..services.stats_service import Snapshot
-from .theme import colour_status
+from .theme import ACCENT, ACCENT2, BORDER, BORDER_DIM, MUTED, colour_status
 
 
 def _codes(codes) -> str:
     return ", ".join(sorted(code.value for code in codes)) or "-"
 
 
-def identity_panel(identity: DigitalID) -> Table:
-    table = Table(title=f"Digital ID  {identity.id}", show_header=False, box=None)
-    table.add_column("field", style="cyan", no_wrap=True)
+def _detail_table(title: str) -> Table:
+    table = Table(
+        title=f"[bold]{title}[/]",
+        show_header=False,
+        box=box.ROUNDED,
+        border_style=BORDER_DIM,
+        title_style=ACCENT,
+        padding=(0, 1),
+    )
+    table.add_column("field", style=ACCENT2, no_wrap=True, min_width=22)
     table.add_column("value")
+    return table
+
+
+def _list_table(title: str) -> Table:
+    return Table(
+        title=f"[bold]{title}[/]",
+        box=box.ROUNDED,
+        border_style=BORDER_DIM,
+        title_style=ACCENT,
+        header_style=ACCENT,
+        row_styles=["", MUTED],
+        padding=(0, 1),
+    )
+
+
+def identity_panel(identity: DigitalID) -> Table:
+    table = _detail_table(f"Digital ID  {identity.id}")
     table.add_row("name", identity.name)
     table.add_row("dob", identity.dob.isoformat())
     table.add_row("nationality", identity.nationality)
@@ -37,8 +62,8 @@ def identity_panel(identity: DigitalID) -> Table:
 
 
 def identity_list_table(identities: Sequence[DigitalID]) -> Table:
-    table = Table(title="Digital IDs")
-    table.add_column("id", style="cyan")
+    table = _list_table("Digital IDs")
+    table.add_column("id", style=BORDER)
     table.add_column("name")
     table.add_column("status")
     table.add_column("nationality")
@@ -57,12 +82,12 @@ def identity_list_table(identities: Sequence[DigitalID]) -> Table:
 
 
 def audit_table(events: Sequence[AuditEvent], title: str = "Audit events") -> Table:
-    table = Table(title=title)
-    table.add_column("occurred at", style="cyan")
+    table = _list_table(title)
+    table.add_column("occurred at", style=BORDER)
     table.add_column("actor")
     table.add_column("action", style="bold")
     table.add_column("identity")
-    table.add_column("payload", style="grey50")
+    table.add_column("payload", style=MUTED)
     for event in events:
         table.add_row(
             event.occurred_at.isoformat(timespec="seconds"),
@@ -75,9 +100,7 @@ def audit_table(events: Sequence[AuditEvent], title: str = "Audit events") -> Ta
 
 
 def stats_table(snapshot: Snapshot) -> Table:
-    table = Table(title="System snapshot", show_header=False, box=None)
-    table.add_column("field", style="cyan")
-    table.add_column("value")
+    table = _detail_table("System snapshot")
     table.add_row("total identities", str(snapshot.total))
     for status, count in snapshot.by_status.items():
         table.add_row(f"  {status.lower()}", str(count))
@@ -86,9 +109,7 @@ def stats_table(snapshot: Snapshot) -> Table:
 
 
 def tax_response_table(response) -> Table:
-    table = Table(title=f"Tax check  {response.identity_id}", show_header=False, box=None)
-    table.add_column("field", style="cyan")
-    table.add_column("value")
+    table = _detail_table(f"Tax check  {response.identity_id}")
     table.add_row("exists", "yes" if response.exists else "no")
     table.add_row("active now", "yes" if response.active_now else "no")
     table.add_row(
@@ -107,9 +128,7 @@ def tax_response_table(response) -> Table:
 
 
 def dvla_response_table(response) -> Table:
-    table = Table(title=f"DVLA check  {response.identity_id}", show_header=False, box=None)
-    table.add_column("field", style="cyan")
-    table.add_column("value")
+    table = _detail_table(f"DVLA check  {response.identity_id}")
     table.add_row("exists", "yes" if response.exists else "no")
     table.add_row(
         "active now",
@@ -125,9 +144,7 @@ def dvla_response_table(response) -> Table:
 
 
 def employer_response_table(response) -> Table:
-    table = Table(title=f"Employer check  {response.identity_id}", show_header=False, box=None)
-    table.add_column("field", style="cyan")
-    table.add_column("value")
+    table = _detail_table(f"Employer check  {response.identity_id}")
     table.add_row(
         "valid now",
         "[bold green]yes[/]" if response.valid_now else "[red]no[/]",
