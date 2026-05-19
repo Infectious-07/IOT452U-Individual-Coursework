@@ -97,13 +97,13 @@ def bootstrap(connection: sqlite3.Connection) -> None:
 # --- identity repository ---
 
 
-def _split_codes(value: str | None, enum_cls):
+def _split_codes(value: str | None, enum_cls: type) -> frozenset:
     if not value:
         return frozenset()
     return frozenset(enum_cls(piece) for piece in value.split(",") if piece)
 
 
-def _join_codes(codes) -> str:
+def _join_codes(codes: frozenset) -> str:
     return ",".join(sorted(code.value for code in codes))
 
 

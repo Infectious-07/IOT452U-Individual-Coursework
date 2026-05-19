@@ -109,7 +109,7 @@ Verification follows the same path but the service returns a role-scoped respons
 
 **Command and Argument dataclasses as declarative UI.** Each portal builds a list of `Command` objects that carry their arguments, validators, handler closure and optional confirmation message. The shell interprets this data generically. Adding a new command means adding one `portal.add(Command(...))` call; no shell code changes.
 
-**Role-based authorisation at the service boundary.** Every service method calls `require(actor, action)` as its first line. The permission map is a plain dictionary in `roles.py`. Consumer portals additionally check the exact role before calling verification, so a tax actor can never call the employer endpoint.
+**Role-based authorisation at the service boundary.** Every service method calls `require(actor, action)` as its first line. The permission map is a plain dictionary in `models.py`. Consumer portals additionally check the exact role before calling verification, so a tax actor can never call the employer endpoint.
 
 **Append-only audit log.** Every lifecycle action and every verification request writes an `AuditEvent`. The audit repository has no update or delete methods. Tax verification replays the audit log to detect suspensions within a reporting period, including suspensions that started before the window.
 

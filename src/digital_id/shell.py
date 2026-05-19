@@ -14,13 +14,14 @@ from rich.text import Text
 from .models import (
     Argument,
     AuditEvent,
+    Command,
     DigitalID,
     DigitalIdError,
     IdentityStatus,
     OrganisationRole,
     Portal,
 )
-from .services import Snapshot
+from .services import DvlaResponse, EmployerResponse, Snapshot, TaxResponse
 
 # --- prompter ---
 
@@ -117,7 +118,7 @@ class ScriptedPrompter:
     def __init__(self, answers: Sequence) -> None:
         self.answers = list(answers)
 
-    def _pop(self):
+    def _pop(self) -> object:
         if not self.answers:
             raise AssertionError("ScriptedPrompter ran out of answers")
         return self.answers.pop(0)
@@ -349,7 +350,7 @@ def stats_table(snapshot: Snapshot) -> Table:
     return table
 
 
-def tax_response_table(response) -> Table:
+def tax_response_table(response: TaxResponse) -> Table:
     table = _detail_table(f"Tax check  {response.identity_id}")
     table.add_row("exists", "yes" if response.exists else "no")
     table.add_row("active now", "yes" if response.active_now else "no")
@@ -368,7 +369,7 @@ def tax_response_table(response) -> Table:
     return table
 
 
-def dvla_response_table(response) -> Table:
+def dvla_response_table(response: DvlaResponse) -> Table:
     table = _detail_table(f"DVLA check  {response.identity_id}")
     table.add_row("exists", "yes" if response.exists else "no")
     table.add_row(
@@ -384,7 +385,7 @@ def dvla_response_table(response) -> Table:
     return table
 
 
-def employer_response_table(response) -> Table:
+def employer_response_table(response: EmployerResponse) -> Table:
     table = _detail_table(f"Employer check  {response.identity_id}")
     table.add_row(
         "valid now",
@@ -522,7 +523,7 @@ class MenuShell:
             return value
         return None
 
-    def _run_command(self, portal: Portal, command) -> None:
+    def _run_command(self, portal: Portal, command: Command) -> None:
         self._screen.clear()
         self._screen.header(portal.title, command.label)
         args: dict[str, str] = {}
