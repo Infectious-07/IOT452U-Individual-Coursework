@@ -33,6 +33,8 @@ A `config.toml` at the working directory is read on start up. If absent, the def
 path = "data/digital_id.sqlite"
 ```
 
+The path is resolved relative to the directory you launch from. Running from the project root keeps the SQLite file at `data/digital_id.sqlite` next to the source tree.
+
 ## Portals
 
 The system has four portals, each with a different level of access.

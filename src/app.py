@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 
 from config import Settings, load
 from database import AuditRepository, IdentityRepository, bootstrap, connect
@@ -29,7 +29,7 @@ def build_portals(
     verification: VerificationService,
     export_service: ExportService,
     stats_service: StatsService,
-    id_generator=None,
+    id_generator: Callable[[], str] | None = None,
 ) -> Mapping[OrganisationRole, Portal]:
     return {
         OrganisationRole.CENTRAL_AUTHORITY: build_central_portal(

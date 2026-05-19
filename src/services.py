@@ -381,6 +381,31 @@ class VerificationService:
     ) -> None:
         self._audit.record(actor, AuditAction.VERIFY, identity_id, payload)
 
+    def _check_role(
+        self,
+        actor: OrganisationRole,
+        expected: OrganisationRole,
+        endpoint: str,
+    ) -> None:
+        if actor is not expected:
+            raise AuthorisationError(actor.value, endpoint)
+        require(actor, "verify")
+
+    def _was_suspended_in_period(
+        self,
+        identity_id: str,
+        period_start: date,
+        period_end: date,
+    ) -> bool:
+        window_start = datetime.combine(period_start, time.min)
+        window_end = datetime.combine(period_end, time.max)
+        status_at_start = self._status_at(identity_id, window_start)
+        in_period = self._audit.events_between(window_start, window_end, identity_id)
+        return (
+            status_at_start is IdentityStatus.SUSPENDED
+            or any(event.action is AuditAction.SUSPEND for event in in_period)
+        )
+
     def verify_for_tax(
         self,
         actor: OrganisationRole,
@@ -388,25 +413,18 @@ class VerificationService:
         period_start: date,
         period_end: date,
     ) -> TaxResponse:
-        if actor is not OrganisationRole.TAX:
-            raise AuthorisationError(actor.value, "verify_for_tax")
-        require(actor, "verify")
+        self._check_role(actor, OrganisationRole.TAX, "verify_for_tax")
         if period_end < period_start:
             raise ValidationError("period", "end is before start")
         clean_id = validate_identity_id(identity_id)
         identity = self._fetch(clean_id)
         exists = identity is not None
         active_now = identity is not None and identity.status is IdentityStatus.ACTIVE
-        suspended_in_period = False
-        if identity is not None:
-            window_start = datetime.combine(period_start, time.min)
-            window_end = datetime.combine(period_end, time.max)
-            status_at_start = self._status_at(clean_id, window_start)
-            in_period = self._audit.events_between(window_start, window_end, clean_id)
-            suspended_in_period = (
-                status_at_start is IdentityStatus.SUSPENDED
-                or any(event.action is AuditAction.SUSPEND for event in in_period)
-            )
+        suspended_in_period = (
+            self._was_suspended_in_period(clean_id, period_start, period_end)
+            if identity is not None
+            else False
+        )
         response = TaxResponse(
             identity_id=clean_id,
             exists=exists,
@@ -434,9 +452,7 @@ class VerificationService:
         actor: OrganisationRole,
         identity_id: str,
     ) -> DvlaResponse:
-        if actor is not OrganisationRole.DVLA:
-            raise AuthorisationError(actor.value, "verify_for_dvla")
-        require(actor, "verify")
+        self._check_role(actor, OrganisationRole.DVLA, "verify_for_dvla")
         clean_id = validate_identity_id(identity_id)
         identity = self._fetch(clean_id)
         exists = identity is not None
@@ -467,9 +483,7 @@ class VerificationService:
         actor: OrganisationRole,
         identity_id: str,
     ) -> EmployerResponse:
-        if actor is not OrganisationRole.EMPLOYER:
-            raise AuthorisationError(actor.value, "verify_for_employer")
-        require(actor, "verify")
+        self._check_role(actor, OrganisationRole.EMPLOYER, "verify_for_employer")
         clean_id = validate_identity_id(identity_id)
         identity = self._fetch(clean_id)
         valid_now = identity is not None and identity.status is IdentityStatus.ACTIVE
@@ -551,7 +565,7 @@ class ExportService:
 @dataclass(frozen=True)
 class Snapshot:
     total: int
-    by_status: dict[str, int]
+    by_status: Mapping[str, int]
     events_last_7_days: int
 
 

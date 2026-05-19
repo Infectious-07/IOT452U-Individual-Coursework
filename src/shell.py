@@ -527,35 +527,47 @@ class MenuShell:
     def _run_command(self, portal: Portal, command: Command) -> None:
         self._screen.clear()
         self._screen.header(portal.title, command.label)
+        try:
+            args = self._collect_arguments(command)
+            if args is None:
+                return
+            if not self._confirm_if_needed(command):
+                return
+            self._dispatch(command, args)
+        finally:
+            self._after_action()
+
+    def _collect_arguments(self, command: Command) -> dict[str, str] | None:
         args: dict[str, str] = {}
         for argument in command.arguments:
             value = self._collect_argument(argument)
             if value is None:
-                self._after_action()
-                return
+                return None
             args[argument.key] = value
-        if command.confirmation is not None and not self._prompter.confirm(
-            command.confirmation, default=False
-        ):
-            self._screen.warning("Cancelled.")
-            self._after_action()
-            return
+        return args
+
+    def _confirm_if_needed(self, command: Command) -> bool:
+        if command.confirmation is None:
+            return True
+        if self._prompter.confirm(command.confirmation, default=False):
+            return True
+        self._screen.warning("Cancelled.")
+        return False
+
+    def _dispatch(self, command: Command, args: dict[str, str]) -> None:
         try:
             result = command.handler(args)
         except DigitalIdError as err:
             self._screen.error(f"rejected: {err}")
-            self._after_action()
             return
         except ValueError as err:
             self._screen.error(str(err))
-            self._after_action()
             return
         if result is not None:
             self._screen.console.print()
             self._screen.console.print(result)
             self._screen.console.print()
         self._screen.rule()
-        self._after_action()
 
     def _after_action(self) -> None:
         if self._pause:
