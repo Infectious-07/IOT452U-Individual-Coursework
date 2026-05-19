@@ -7,9 +7,11 @@ from ..authorisation.roles import OrganisationRole
 from ..cli.render import (
     dvla_response_table,
     employer_response_table,
-    lookup_response_table,
+    immigration_response_table,
+    local_authority_response_table,
     tax_response_table,
     validity_response_table,
+    welfare_response_table,
 )
 from ..domain.exceptions import ValidationError
 from ..services.verification import VerificationService
@@ -120,13 +122,77 @@ def build_employer_portal(verification: VerificationService) -> Portal:
     return portal
 
 
-def build_lookup_portal(role: OrganisationRole, title: str, verification: VerificationService) -> Portal:
-    portal = Portal(role, title, "Validity, name and residency status.")
+def build_welfare_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.WELFARE,
+        "Welfare Services",
+        "Verify identity and check benefit eligibility.",
+    )
 
     def verify(args: Mapping[str, str]):
-        return lookup_response_table(
-            verification.verify_lookup(role, args["identity_id"])
+        return welfare_response_table(
+            verification.verify_for_welfare(OrganisationRole.WELFARE, args["identity_id"])
         )
 
-    portal.add(Command("verify", "Verify and look up", "Returns validity, name and residency.", (_identity_arg(),), verify))
+    portal.add(
+        Command(
+            "verify",
+            "Verify for benefit eligibility",
+            "Returns validity, name, residency and right to work.",
+            (_identity_arg(),),
+            verify,
+        )
+    )
+    return portal
+
+
+def build_local_authority_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.LOCAL_AUTHORITY,
+        "Local Authority",
+        "Verify identity and check address for local services.",
+    )
+
+    def verify(args: Mapping[str, str]):
+        return local_authority_response_table(
+            verification.verify_for_local_authority(
+                OrganisationRole.LOCAL_AUTHORITY, args["identity_id"]
+            )
+        )
+
+    portal.add(
+        Command(
+            "verify",
+            "Verify for local services",
+            "Returns validity, name, address and residency.",
+            (_identity_arg(),),
+            verify,
+        )
+    )
+    return portal
+
+
+def build_immigration_portal(verification: VerificationService) -> Portal:
+    portal = Portal(
+        OrganisationRole.IMMIGRATION,
+        "Immigration Authority",
+        "Verify identity and check immigration status.",
+    )
+
+    def verify(args: Mapping[str, str]):
+        return immigration_response_table(
+            verification.verify_for_immigration(
+                OrganisationRole.IMMIGRATION, args["identity_id"]
+            )
+        )
+
+    portal.add(
+        Command(
+            "verify",
+            "Verify immigration status",
+            "Returns validity, nationality, right to work and residency.",
+            (_identity_arg(),),
+            verify,
+        )
+    )
     return portal

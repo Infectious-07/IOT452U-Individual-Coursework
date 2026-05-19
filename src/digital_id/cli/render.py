@@ -147,8 +147,8 @@ def employer_response_table(response) -> Table:
     return table
 
 
-def lookup_response_table(response) -> Table:
-    table = Table(title=f"Lookup  {response.identity_id}", show_header=False, box=None)
+def welfare_response_table(response) -> Table:
+    table = Table(title=f"Welfare check  {response.identity_id}", show_header=False, box=None)
     table.add_column("field", style="cyan")
     table.add_column("value")
     table.add_row(
@@ -156,6 +156,41 @@ def lookup_response_table(response) -> Table:
         "[bold green]yes[/]" if response.valid_now else "[red]no[/]",
     )
     table.add_row("name", response.name or "-")
+    table.add_row(
+        "residency",
+        response.residency_status.value if response.residency_status else "-",
+    )
+    table.add_row("right to work", "yes" if response.right_to_work else "no")
+    return table
+
+
+def local_authority_response_table(response) -> Table:
+    table = Table(title=f"Local authority check  {response.identity_id}", show_header=False, box=None)
+    table.add_column("field", style="cyan")
+    table.add_column("value")
+    table.add_row(
+        "valid now",
+        "[bold green]yes[/]" if response.valid_now else "[red]no[/]",
+    )
+    table.add_row("name", response.name or "-")
+    table.add_row("address", response.address or "-")
+    table.add_row(
+        "residency",
+        response.residency_status.value if response.residency_status else "-",
+    )
+    return table
+
+
+def immigration_response_table(response) -> Table:
+    table = Table(title=f"Immigration check  {response.identity_id}", show_header=False, box=None)
+    table.add_column("field", style="cyan")
+    table.add_column("value")
+    table.add_row(
+        "valid now",
+        "[bold green]yes[/]" if response.valid_now else "[red]no[/]",
+    )
+    table.add_row("nationality", response.nationality or "-")
+    table.add_row("right to work", "yes" if response.right_to_work else "no")
     table.add_row(
         "residency",
         response.residency_status.value if response.residency_status else "-",

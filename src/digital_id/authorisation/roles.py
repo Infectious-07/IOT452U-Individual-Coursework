@@ -13,6 +13,7 @@ class OrganisationRole(StrEnum):
     EMPLOYER = "EMPLOYER"
     WELFARE = "WELFARE"
     LOCAL_AUTHORITY = "LOCAL_AUTHORITY"
+    IMMIGRATION = "IMMIGRATION"
 
 
 # lifecycle actions belong to the central authority only
@@ -30,6 +31,7 @@ _ROLE_PERMISSIONS: dict[OrganisationRole, set[str]] = {
     OrganisationRole.EMPLOYER: VERIFY_ACTIONS,
     OrganisationRole.WELFARE: VERIFY_ACTIONS,
     OrganisationRole.LOCAL_AUTHORITY: VERIFY_ACTIONS,
+    OrganisationRole.IMMIGRATION: VERIFY_ACTIONS,
 }
 
 

@@ -14,8 +14,10 @@ from ..portals.consumer import (
     build_bank_portal,
     build_dvla_portal,
     build_employer_portal,
-    build_lookup_portal,
+    build_immigration_portal,
+    build_local_authority_portal,
     build_tax_portal,
+    build_welfare_portal,
 )
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
@@ -40,12 +42,9 @@ def build_portals(
         OrganisationRole.DVLA: build_dvla_portal(verification),
         OrganisationRole.BANK: build_bank_portal(verification),
         OrganisationRole.EMPLOYER: build_employer_portal(verification),
-        OrganisationRole.WELFARE: build_lookup_portal(
-            OrganisationRole.WELFARE, "Welfare Services", verification
-        ),
-        OrganisationRole.LOCAL_AUTHORITY: build_lookup_portal(
-            OrganisationRole.LOCAL_AUTHORITY, "Local Authority", verification
-        ),
+        OrganisationRole.WELFARE: build_welfare_portal(verification),
+        OrganisationRole.LOCAL_AUTHORITY: build_local_authority_portal(verification),
+        OrganisationRole.IMMIGRATION: build_immigration_portal(verification),
     }
 
 

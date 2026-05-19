@@ -38,10 +38,29 @@ class EmployerResponse:
 
 
 @dataclass(frozen=True)
-class LookupResponse:
+class WelfareResponse:
     identity_id: str
     valid_now: bool
     name: str | None
+    residency_status: ResidencyStatus | None
+    right_to_work: bool
+
+
+@dataclass(frozen=True)
+class LocalAuthorityResponse:
+    identity_id: str
+    valid_now: bool
+    name: str | None
+    address: str | None
+    residency_status: ResidencyStatus | None
+
+
+@dataclass(frozen=True)
+class ImmigrationResponse:
+    identity_id: str
+    valid_now: bool
+    nationality: str | None
+    right_to_work: bool
     residency_status: ResidencyStatus | None
 
 
@@ -225,22 +244,65 @@ class VerificationService:
         )
         return response
 
-    def verify_lookup(
+    def verify_for_welfare(
         self,
         actor: OrganisationRole,
         identity_id: str,
-    ) -> LookupResponse:
-        if actor not in (OrganisationRole.WELFARE, OrganisationRole.LOCAL_AUTHORITY):
-            raise AuthorisationError(actor.value, "verify_lookup")
+    ) -> WelfareResponse:
+        if actor is not OrganisationRole.WELFARE:
+            raise AuthorisationError(actor.value, "verify_for_welfare")
         require(actor, "verify")
         clean_id = validate_identity_id(identity_id)
         identity = self._fetch(clean_id)
         valid_now = identity is not None and identity.status is IdentityStatus.ACTIVE
-        response = LookupResponse(
+        response = WelfareResponse(
             identity_id=clean_id,
             valid_now=valid_now,
             name=identity.name if valid_now else None,
             residency_status=identity.residency_status if valid_now else None,
+            right_to_work=bool(identity.right_to_work) if valid_now else False,
         )
-        self._record(actor, clean_id, {"kind": "lookup", "valid_now": valid_now})
+        self._record(actor, clean_id, {"kind": "welfare", "valid_now": valid_now})
+        return response
+
+    def verify_for_local_authority(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+    ) -> LocalAuthorityResponse:
+        if actor is not OrganisationRole.LOCAL_AUTHORITY:
+            raise AuthorisationError(actor.value, "verify_for_local_authority")
+        require(actor, "verify")
+        clean_id = validate_identity_id(identity_id)
+        identity = self._fetch(clean_id)
+        valid_now = identity is not None and identity.status is IdentityStatus.ACTIVE
+        response = LocalAuthorityResponse(
+            identity_id=clean_id,
+            valid_now=valid_now,
+            name=identity.name if valid_now else None,
+            address=identity.address if valid_now else None,
+            residency_status=identity.residency_status if valid_now else None,
+        )
+        self._record(actor, clean_id, {"kind": "local_authority", "valid_now": valid_now})
+        return response
+
+    def verify_for_immigration(
+        self,
+        actor: OrganisationRole,
+        identity_id: str,
+    ) -> ImmigrationResponse:
+        if actor is not OrganisationRole.IMMIGRATION:
+            raise AuthorisationError(actor.value, "verify_for_immigration")
+        require(actor, "verify")
+        clean_id = validate_identity_id(identity_id)
+        identity = self._fetch(clean_id)
+        valid_now = identity is not None and identity.status is IdentityStatus.ACTIVE
+        response = ImmigrationResponse(
+            identity_id=clean_id,
+            valid_now=valid_now,
+            nationality=identity.nationality if valid_now else None,
+            right_to_work=bool(identity.right_to_work) if valid_now else False,
+            residency_status=identity.residency_status if valid_now else None,
+        )
+        self._record(actor, clean_id, {"kind": "immigration", "valid_now": valid_now})
         return response
