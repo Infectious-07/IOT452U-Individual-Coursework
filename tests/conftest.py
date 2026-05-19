@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from digital_id.authorisation.roles import OrganisationRole
 from digital_id.domain.identity import DigitalID, IdentityStatus, ResidencyStatus
+from digital_id.domain.roles import OrganisationRole
 from digital_id.persistence.audit_repository import AuditRepository
 from digital_id.persistence.database import bootstrap, connect
 from digital_id.persistence.identity_repository import IdentityRepository

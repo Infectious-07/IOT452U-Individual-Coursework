@@ -5,10 +5,9 @@ from collections.abc import Sequence
 from rich import box
 from rich.table import Table
 
-from ..domain.audit import AuditEvent
-from ..domain.identity import DigitalID
-from ..services.stats_service import Snapshot
-from .theme import ACCENT, ACCENT2, BORDER, BORDER_DIM, MUTED, colour_status
+from ..domain.identity import AuditEvent, DigitalID
+from ..services.admin import Snapshot
+from .screen import ACCENT, ACCENT2, BORDER, BORDER_DIM, MUTED, colour_status
 
 
 def _codes(codes) -> str:

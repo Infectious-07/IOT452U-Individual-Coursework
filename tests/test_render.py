@@ -2,6 +2,7 @@ from datetime import date, datetime
 from io import StringIO
 
 from rich.console import Console
+from tests.conftest import make_sample_identity
 
 from digital_id.cli.render import (
     audit_table,
@@ -12,11 +13,15 @@ from digital_id.cli.render import (
     stats_table,
     tax_response_table,
 )
-from digital_id.domain.audit import AuditAction, AuditEvent
-from digital_id.domain.identity import DrivingEntitlement, DrivingRestriction, TaxBand
-from digital_id.services.stats_service import Snapshot
+from digital_id.domain.identity import (
+    AuditAction,
+    AuditEvent,
+    DrivingEntitlement,
+    DrivingRestriction,
+    TaxBand,
+)
+from digital_id.services.admin import Snapshot
 from digital_id.services.verification import DvlaResponse, EmployerResponse, TaxResponse
-from tests.conftest import make_sample_identity
 
 
 def _render(renderable) -> str:

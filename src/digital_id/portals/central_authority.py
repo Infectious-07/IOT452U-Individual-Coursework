@@ -6,13 +6,13 @@ from pathlib import Path
 from rich.console import Group
 from rich.panel import Panel
 
-from ..authorisation.roles import OrganisationRole
 from ..cli.render import (
     audit_table,
     identity_list_table,
     identity_panel,
     stats_table,
 )
+from ..domain.roles import OrganisationRole
 from ..domain.validators import (
     generate_identity_id,
     generate_tax_reference,
@@ -23,10 +23,9 @@ from ..domain.validators import (
     validate_postcode,
     validate_tax_reference,
 )
+from ..services.admin import ExportService, StatsService
 from ..services.audit_service import AuditService
-from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService, NewIdentity
-from ..services.stats_service import StatsService
 from .base import Argument, Command, Portal
 
 ROLE = OrganisationRole.CENTRAL_AUTHORITY

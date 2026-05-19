@@ -1,8 +1,11 @@
 from dataclasses import FrozenInstanceError
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import pytest
+from tests.conftest import make_sample_identity
 
+from digital_id.config import DEFAULT_DB_PATH, load
 from digital_id.domain.exceptions import (
     AuthorisationError,
     DigitalIdError,
@@ -18,8 +21,11 @@ from digital_id.domain.identity import (
     IdentityStatus,
     ResidencyStatus,
     TaxBand,
+    assert_allowed,
+    is_allowed,
 )
-from digital_id.domain.transitions import assert_allowed, is_allowed
+from digital_id.domain.roles import OrganisationRole, require
+from digital_id.domain.roles import is_allowed as role_is_allowed
 from digital_id.domain.validators import (
     validate_dob,
     validate_driving_entitlements,
@@ -32,7 +38,6 @@ from digital_id.domain.validators import (
     validate_tax_band,
     validate_tax_reference,
 )
-from tests.conftest import make_sample_identity
 
 # entity
 
@@ -193,3 +198,62 @@ def test_driving_restrictions_validates() -> None:
     assert validate_driving_restrictions("glasses,automatic_only") == frozenset(
         {DrivingRestriction.GLASSES, DrivingRestriction.AUTOMATIC_ONLY}
     )
+
+
+# authorisation / roles
+
+CONSUMER_ROLES = [
+    OrganisationRole.TAX,
+    OrganisationRole.DVLA,
+    OrganisationRole.EMPLOYER,
+]
+
+
+@pytest.mark.parametrize("action", ["create", "update", "suspend", "revoke", "reactivate"])
+def test_central_authority_can_run_lifecycle_actions(action: str) -> None:
+    assert role_is_allowed(OrganisationRole.CENTRAL_AUTHORITY, action) is True
+
+
+@pytest.mark.parametrize("role", CONSUMER_ROLES)
+@pytest.mark.parametrize("action", ["create", "update", "suspend", "revoke", "reactivate"])
+def test_consumer_roles_cannot_run_lifecycle_actions(
+    role: OrganisationRole, action: str
+) -> None:
+    assert role_is_allowed(role, action) is False
+
+
+@pytest.mark.parametrize("role", CONSUMER_ROLES + [OrganisationRole.CENTRAL_AUTHORITY])
+def test_every_role_can_verify(role: OrganisationRole) -> None:
+    assert role_is_allowed(role, "verify") is True
+
+
+def test_require_raises_authorisation_error_for_disallowed() -> None:
+    with pytest.raises(AuthorisationError) as excinfo:
+        require(OrganisationRole.EMPLOYER, "create")
+    assert excinfo.value.role == "EMPLOYER"
+    assert excinfo.value.action == "create"
+
+
+def test_require_passes_for_allowed() -> None:
+    require(OrganisationRole.CENTRAL_AUTHORITY, "create")
+
+
+# config
+
+def test_load_returns_defaults_when_file_missing(tmp_path: Path) -> None:
+    settings = load(tmp_path / "missing.toml")
+    assert settings.database_path == DEFAULT_DB_PATH
+
+
+def test_load_reads_overrides(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[database]\npath = "custom/path.sqlite"\n')
+    settings = load(config_path)
+    assert settings.database_path == "custom/path.sqlite"
+
+
+def test_load_uses_defaults_for_missing_keys(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("")
+    settings = load(config_path)
+    assert settings.database_path == DEFAULT_DB_PATH

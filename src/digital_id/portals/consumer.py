@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date
 
-from ..authorisation.roles import OrganisationRole
 from ..cli.render import dvla_response_table, employer_response_table, tax_response_table
 from ..domain.exceptions import ValidationError
+from ..domain.roles import OrganisationRole
 from ..domain.validators import validate_identity_id
 from ..services.verification import VerificationService
 from .base import Argument, Command, Portal

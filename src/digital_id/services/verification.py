@@ -5,17 +5,17 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time
 from typing import Any
 
-from ..authorisation.roles import OrganisationRole, require
 from ..clock import utc_now
-from ..domain.audit import AuditAction
 from ..domain.exceptions import AuthorisationError, ValidationError
 from ..domain.identity import (
+    AuditAction,
     DigitalID,
     DrivingEntitlement,
     DrivingRestriction,
     IdentityStatus,
     TaxBand,
 )
+from ..domain.roles import OrganisationRole, require
 from ..domain.validators import validate_identity_id
 from ..persistence.identity_repository import IdentityRepository
 from .audit_service import AuditService

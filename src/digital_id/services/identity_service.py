@@ -4,19 +4,19 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from ..authorisation.roles import OrganisationRole, require
 from ..clock import utc_now
-from ..domain.audit import AuditAction
 from ..domain.exceptions import InvalidTransitionError
 from ..domain.identity import (
+    AuditAction,
     DigitalID,
     DrivingEntitlement,
     DrivingRestriction,
     IdentityStatus,
     ResidencyStatus,
     TaxBand,
+    assert_allowed,
 )
-from ..domain.transitions import assert_allowed
+from ..domain.roles import OrganisationRole, require
 from ..domain.validators import (
     validate_dob,
     validate_driving_entitlements,

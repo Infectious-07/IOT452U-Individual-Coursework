@@ -3,8 +3,8 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Mapping
 
-from ..authorisation.roles import OrganisationRole
-from ..config.settings import Settings, load
+from ..config import Settings, load
+from ..domain.roles import OrganisationRole
 from ..domain.validators import generate_identity_id, generate_tax_reference
 from ..persistence.audit_repository import AuditRepository
 from ..persistence.database import bootstrap, connect
@@ -12,10 +12,9 @@ from ..persistence.identity_repository import IdentityRepository
 from ..portals.base import Portal
 from ..portals.central_authority import build_central_portal
 from ..portals.consumer import build_dvla_portal, build_employer_portal, build_tax_portal
+from ..services.admin import ExportService, StatsService
 from ..services.audit_service import AuditService
-from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService, NewIdentity
-from ..services.stats_service import StatsService
 from ..services.verification import VerificationService
 from .shell import MenuShell
 

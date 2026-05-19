@@ -1,11 +1,11 @@
 from datetime import date
 
 import pytest
+from tests.conftest import make_new_identity
 
-from digital_id.authorisation.roles import OrganisationRole
 from digital_id.domain.exceptions import AuthorisationError, ValidationError
 from digital_id.domain.identity import DrivingEntitlement, TaxBand
-from tests.conftest import make_new_identity
+from digital_id.domain.roles import OrganisationRole
 
 CENTRAL = OrganisationRole.CENTRAL_AUTHORITY
 TAX = OrganisationRole.TAX

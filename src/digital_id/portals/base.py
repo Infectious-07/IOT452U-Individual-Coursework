@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..authorisation.roles import OrganisationRole
+from ..domain.roles import OrganisationRole
 
 CommandResult = Any
 CommandHandler = Callable[[Mapping[str, str]], CommandResult]

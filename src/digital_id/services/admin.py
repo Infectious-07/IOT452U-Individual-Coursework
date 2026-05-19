@@ -2,21 +2,19 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import datetime
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from ..authorisation.roles import OrganisationRole, require
+from ..clock import utc_now
+from ..domain.identity import IdentityStatus
+from ..domain.roles import OrganisationRole, require
 from ..persistence.audit_repository import AuditRepository
 from ..persistence.identity_repository import IdentityRepository
 
 IDENTITY_COLUMNS = ("id", "name", "dob", "status", "created_at", "updated_at")
-AUDIT_COLUMNS = (
-    "occurred_at",
-    "actor_role",
-    "action",
-    "identity_id",
-    "payload",
-)
+AUDIT_COLUMNS = ("occurred_at", "actor_role", "action", "identity_id", "payload")
 
 
 class ExportService:
@@ -51,7 +49,6 @@ class ExportService:
     def export_audit(self, actor: OrganisationRole, target: Path) -> int:
         require(actor, "export")
         target.parent.mkdir(parents=True, exist_ok=True)
-        # walking the full audit range covers every event ever appended
         rows = list(self._audit.list_between(datetime.min, datetime.max))
         with target.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
@@ -67,3 +64,36 @@ class ExportService:
                     ]
                 )
         return len(rows)
+
+
+@dataclass(frozen=True)
+class Snapshot:
+    total: int
+    by_status: dict[str, int]
+    events_last_7_days: int
+
+
+class StatsService:
+    def __init__(
+        self,
+        identities: IdentityRepository,
+        audit: AuditRepository,
+        clock: Callable[[], datetime] = utc_now,
+    ) -> None:
+        self._identities = identities
+        self._audit = audit
+        self._clock = clock
+
+    def snapshot(self, actor: OrganisationRole) -> Snapshot:
+        require(actor, "stats")
+        records = list(self._identities.list_all())
+        by_status: dict[str, int] = {status.value: 0 for status in IdentityStatus}
+        for identity in records:
+            by_status[identity.status.value] += 1
+        now = self._clock()
+        recent = list(self._audit.list_between(now - timedelta(days=7), now))
+        return Snapshot(
+            total=len(records),
+            by_status=by_status,
+            events_last_7_days=len(recent),
+        )

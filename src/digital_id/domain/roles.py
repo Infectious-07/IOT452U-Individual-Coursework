@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from ..domain.exceptions import AuthorisationError
+from .exceptions import AuthorisationError
 
 
 class OrganisationRole(StrEnum):
@@ -12,11 +12,8 @@ class OrganisationRole(StrEnum):
     EMPLOYER = "EMPLOYER"
 
 
-# lifecycle actions belong to the central authority only
 LIFECYCLE_ACTIONS = {"create", "update", "suspend", "revoke", "reactivate"}
-# every role can verify, but each gets a tailored response shape
 VERIFY_ACTIONS = {"verify"}
-# central authority can also pull history, exports and stats
 ADMIN_ACTIONS = {"history", "export", "stats", "list"}
 
 _ROLE_PERMISSIONS: dict[OrganisationRole, set[str]] = {

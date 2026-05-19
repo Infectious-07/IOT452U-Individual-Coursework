@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..authorisation.roles import OrganisationRole
 from ..domain.exceptions import DigitalIdError
+from ..domain.roles import OrganisationRole
 from ..portals.base import Argument, Portal
 from .prompter import Choice, Prompter, QuestionaryPrompter, Separator
 from .screen import Screen

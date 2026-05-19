@@ -4,7 +4,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-from ..domain.audit import AuditAction, AuditEvent
+from ..domain.identity import AuditAction, AuditEvent
 
 
 def _row_to_event(row: sqlite3.Row) -> AuditEvent:

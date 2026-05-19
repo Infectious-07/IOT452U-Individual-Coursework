@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from enum import StrEnum
+from typing import Any
+
+from .exceptions import InvalidTransitionError
 
 
 class IdentityStatus(StrEnum):
@@ -102,3 +106,43 @@ class DigitalID:
             residency_status=residency,
             updated_at=now,
         )
+
+
+# --- audit types ---
+
+class AuditAction(StrEnum):
+    CREATE = "CREATE"
+    UPDATE = "UPDATE"
+    SUSPEND = "SUSPEND"
+    REVOKE = "REVOKE"
+    REACTIVATE = "REACTIVATE"
+    VERIFY = "VERIFY"
+
+
+@dataclass(frozen=True)
+class AuditEvent:
+    occurred_at: datetime
+    actor_role: str
+    action: AuditAction
+    identity_id: str | None
+    payload: Mapping[str, Any] = field(default_factory=dict)
+
+
+# --- status transitions ---
+
+_ALLOWED: dict[IdentityStatus, set[IdentityStatus]] = {
+    IdentityStatus.ACTIVE: {IdentityStatus.SUSPENDED, IdentityStatus.REVOKED},
+    IdentityStatus.SUSPENDED: {IdentityStatus.ACTIVE, IdentityStatus.REVOKED},
+    IdentityStatus.REVOKED: set(),
+}
+
+
+def is_allowed(current: IdentityStatus, target: IdentityStatus) -> bool:
+    if current is target:
+        return True
+    return target in _ALLOWED[current]
+
+
+def assert_allowed(current: IdentityStatus, target: IdentityStatus) -> None:
+    if not is_allowed(current, target):
+        raise InvalidTransitionError(current.value, target.value)

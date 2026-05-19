@@ -4,9 +4,9 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Any
 
-from ..authorisation.roles import OrganisationRole
 from ..clock import utc_now
-from ..domain.audit import AuditAction, AuditEvent
+from ..domain.identity import AuditAction, AuditEvent
+from ..domain.roles import OrganisationRole
 from ..persistence.audit_repository import AuditRepository
 
 

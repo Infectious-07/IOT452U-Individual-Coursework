@@ -2,10 +2,12 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from tests.conftest import make_sample_identity
 
-from digital_id.domain.audit import AuditAction, AuditEvent
 from digital_id.domain.exceptions import DuplicateIdentityError, IdentityNotFoundError
 from digital_id.domain.identity import (
+    AuditAction,
+    AuditEvent,
     DrivingEntitlement,
     DrivingRestriction,
     IdentityStatus,
@@ -15,7 +17,6 @@ from digital_id.domain.identity import (
 from digital_id.persistence.audit_repository import AuditRepository
 from digital_id.persistence.database import bootstrap, connect
 from digital_id.persistence.identity_repository import IdentityRepository
-from tests.conftest import make_sample_identity
 
 # identity repository
 
