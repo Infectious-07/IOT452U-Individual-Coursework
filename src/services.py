@@ -8,8 +8,8 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 
-from .database import AuditRepository, IdentityRepository
-from .models import (
+from database import AuditRepository, IdentityRepository
+from models import (
     AuditAction,
     AuditEvent,
     AuthorisationError,

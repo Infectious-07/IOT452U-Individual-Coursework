@@ -4,14 +4,14 @@ from pathlib import Path
 import pytest
 from tests.conftest import make_sample_identity
 
-from digital_id.database import (
+from database import (
     AUDIT_SCHEMA,
     AuditRepository,
     IdentityRepository,
     bootstrap,
     connect,
 )
-from digital_id.models import (
+from models import (
     AuditAction,
     AuditEvent,
     DrivingEntitlement,

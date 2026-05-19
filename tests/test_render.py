@@ -4,15 +4,15 @@ from io import StringIO
 from rich.console import Console
 from tests.conftest import make_sample_identity
 
-from digital_id.models import (
+from models import (
     AuditAction,
     AuditEvent,
     DrivingEntitlement,
     DrivingRestriction,
     TaxBand,
 )
-from digital_id.services import DvlaResponse, EmployerResponse, Snapshot, TaxResponse
-from digital_id.shell import (
+from services import DvlaResponse, EmployerResponse, Snapshot, TaxResponse
+from shell import (
     audit_table,
     dvla_response_table,
     employer_response_table,

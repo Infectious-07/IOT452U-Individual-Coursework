@@ -7,7 +7,7 @@ from pathlib import Path
 from rich.console import Group
 from rich.panel import Panel
 
-from .models import (
+from models import (
     Argument,
     Command,
     OrganisationRole,
@@ -22,7 +22,7 @@ from .models import (
     validate_postcode,
     validate_tax_reference,
 )
-from .services import (
+from services import (
     AuditService,
     ExportService,
     IdentityService,
@@ -30,7 +30,7 @@ from .services import (
     StatsService,
     VerificationService,
 )
-from .shell import (
+from shell import (
     audit_table,
     dvla_response_table,
     employer_response_table,

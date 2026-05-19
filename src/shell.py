@@ -11,7 +11,7 @@ from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
-from .models import (
+from models import (
     Argument,
     AuditEvent,
     Command,
@@ -21,7 +21,7 @@ from .models import (
     OrganisationRole,
     Portal,
 )
-from .services import DvlaResponse, EmployerResponse, Snapshot, TaxResponse
+from services import DvlaResponse, EmployerResponse, Snapshot, TaxResponse
 
 # --- prompter ---
 

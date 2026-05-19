@@ -5,7 +5,7 @@ import sqlite3
 from datetime import date, datetime
 from pathlib import Path
 
-from .models import (
+from models import (
     AuditAction,
     AuditEvent,
     DigitalID,

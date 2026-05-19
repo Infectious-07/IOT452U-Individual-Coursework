@@ -11,7 +11,7 @@ A console backend that lets a central authority manage Digital IDs while authori
 ```
 python -m pip install -r requirements-dev.txt
 python -m pip install -e .
-python -m digital_id
+python src/app.py
 ```
 
 The shell clears the screen and shows an ASCII art banner followed by an arrow key portal menu. After selecting a portal you pick a command from another arrow key menu. Each command then asks for its arguments one at a time. Destructive actions such as revoke and suspend prompt for confirmation before they run.
@@ -58,7 +58,7 @@ Each Digital ID carries the following attributes.
 ## Architecture
 
 ```
-src/digital_id
+src/
   models.py       identity entity, enums, roles, exceptions, transitions, validators, portal types
   database.py     SQLite schema, connection, identity and audit repositories
   services.py     identity lifecycle, audit, verification, export and stats services

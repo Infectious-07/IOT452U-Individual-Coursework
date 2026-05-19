@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from tests.conftest import make_sample_identity
 
-from digital_id.config import DEFAULT_DB_PATH, load
-from digital_id.models import (
+from config import DEFAULT_DB_PATH, load
+from models import (
     AuthorisationError,
     DigitalID,
     DigitalIdError,
@@ -36,7 +36,7 @@ from digital_id.models import (
     validate_tax_band,
     validate_tax_reference,
 )
-from digital_id.shell import Screen, ScriptedPrompter
+from shell import Screen, ScriptedPrompter
 
 # entity
 

@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from tests.conftest import make_new_identity
 
-from digital_id.models import (
+from models import (
     AuthorisationError,
     DrivingEntitlement,
     OrganisationRole,

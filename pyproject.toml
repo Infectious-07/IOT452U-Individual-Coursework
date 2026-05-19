@@ -14,8 +14,11 @@ dependencies = [
     "rich>=13.7",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+py-modules = ["app", "config", "database", "models", "portals", "services", "shell"]
+
+[tool.setuptools.package-dir]
+"" = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -35,9 +38,8 @@ ignore = ["E501"]
 "tests/*" = ["B011"]
 
 [tool.coverage.run]
-source = ["src/digital_id"]
+source = ["src"]
 branch = true
-omit = ["src/digital_id/__main__.py"]
 
 [tool.coverage.report]
 show_missing = true

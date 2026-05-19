@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from digital_id.database import AuditRepository, IdentityRepository, bootstrap, connect
-from digital_id.models import DigitalID, IdentityStatus, OrganisationRole, ResidencyStatus
-from digital_id.services import AuditService, IdentityService, NewIdentity, VerificationService
+from database import AuditRepository, IdentityRepository, bootstrap, connect
+from models import DigitalID, IdentityStatus, OrganisationRole, ResidencyStatus
+from services import AuditService, IdentityService, NewIdentity, VerificationService
 
 
 def _stepping_clock(start: datetime) -> Callable[[], datetime]:

@@ -3,16 +3,16 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Mapping
 
-from .config import Settings, load
-from .database import AuditRepository, IdentityRepository, bootstrap, connect
-from .models import OrganisationRole, Portal, generate_identity_id, generate_tax_reference
-from .portals import (
+from config import Settings, load
+from database import AuditRepository, IdentityRepository, bootstrap, connect
+from models import OrganisationRole, Portal, generate_identity_id, generate_tax_reference
+from portals import (
     build_central_portal,
     build_dvla_portal,
     build_employer_portal,
     build_tax_portal,
 )
-from .services import (
+from services import (
     AuditService,
     ExportService,
     IdentityService,
@@ -20,7 +20,7 @@ from .services import (
     StatsService,
     VerificationService,
 )
-from .shell import MenuShell
+from shell import MenuShell
 
 
 def build_portals(
@@ -128,3 +128,7 @@ def run(settings: Settings | None = None) -> None:
         MenuShell(portals).run()
     finally:
         connection.close()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    run()
