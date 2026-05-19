@@ -24,7 +24,7 @@ class Prompter(Protocol):
     def confirm(self, message: str, default: bool = False) -> bool: ...
 
 
-class QuestionaryPrompter:
+class QuestionaryPrompter:  # pragma: no cover
     def choose(self, title: str, choices: Sequence[Choice | Separator]) -> str | None:
         import questionary
         from prompt_toolkit.styles import Style

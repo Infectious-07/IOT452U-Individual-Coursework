@@ -59,18 +59,34 @@ Each Digital ID carries the following attributes.
 
 ```
 src/digital_id
-  domain/         entities, status and attribute enums, exceptions, transitions, validators
+  domain/         identity entity, enums, roles, exceptions, transitions, validators
   persistence/    SQLite identity repository and append only audit repository
-  authorisation/  organisation roles and permission resolver
   services/       identity lifecycle, audit, verification, export and stats
-  portals/        per organisation Command definitions
-  cli/            screen, theme, prompter, render and the menu shell
-  config/         settings loader
+  portals/        per organisation Command definitions wired to service handlers
+  cli/            screen, prompter protocol, render helpers and the menu shell
+  config.py       settings loader (reads config.toml with fallback defaults)
 ```
+
+The codebase follows a layered architecture where each layer only depends on the one below it: `domain` has no imports from other layers, `persistence` depends only on `domain`, `services` depend on both, and `portals` plus `cli` sit at the top. This keeps the business rules testable without infrastructure and ensures changes to the UI or database do not ripple through unrelated code.
 
 Lifecycle operations live in `IdentityService` and only accept the central authority role. Verification logic lives in `VerificationService` and returns a different response type per consumer role. Portals describe their commands as data: each `Command` lists its `Argument` set and an optional confirmation message. The shell drives the prompts and renders results as rich tables.
 
-Domain rules:
+## Design decisions
+
+**Frozen dataclasses for entities.** `DigitalID` and `AuditEvent` are immutable. Every mutation returns a new instance via `dataclasses.replace`, which prevents accidental aliasing bugs and makes it obvious when state has changed. The `with_*` methods on `DigitalID` enforce the `updated_at` timestamp and keep the replace call in one place.
+
+**Repository pattern for persistence.** `IdentityRepository` and `AuditRepository` hide SQLite behind a narrow interface (add, get, update, list). Services never see SQL strings. This would let us swap to a different store without changing any business logic.
+
+**Protocol-based Prompter for testability.** The `Prompter` Protocol defines four methods (choose, choose_many, ask, confirm). `QuestionaryPrompter` implements them with real terminal UI; `ScriptedPrompter` pops answers from a list. The menu shell accepts either, so every flow can be tested end to end without user interaction.
+
+**Command and Argument dataclasses as declarative UI.** Each portal builds a list of `Command` objects that carry their arguments, validators, handler closure and optional confirmation message. The shell interprets this data generically. Adding a new command means adding one `portal.add(Command(...))` call; no shell code changes.
+
+**Role-based authorisation at the service boundary.** Every service method calls `require(actor, action)` as its first line. The permission map is a plain dictionary in `roles.py`. Consumer portals additionally check the exact role before calling verification, so a tax actor can never call the employer endpoint.
+
+**Append-only audit log.** Every lifecycle action and every verification request writes an `AuditEvent`. The audit repository has no update or delete methods. Tax verification replays the audit log to detect suspensions within a reporting period, including suspensions that started before the window.
+
+## Domain rules
+
 - A revoked Digital ID is terminal. Updates and further transitions are rejected.
 - Suspend, revoke and reactivate are idempotent when the identity is already in the target state.
 - Tax verification replays the audit log to determine whether the identity was suspended at any point during the reporting period, including suspensions that began before the period started.
@@ -84,4 +100,4 @@ coverage run -m pytest
 coverage report
 ```
 
-CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 85 percent branch coverage threshold.
+CI runs the same commands on Python 3.14 on every push to `main` and on pull requests. The pipeline enforces a minimum 90 percent branch coverage threshold.

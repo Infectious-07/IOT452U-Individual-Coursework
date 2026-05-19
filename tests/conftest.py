@@ -77,7 +77,8 @@ def wired(tmp_path: Path, clock):
     audit = AuditService(audit_repo, clock=clock)
     identity_service = IdentityService(identities, audit, clock=clock)
     verification = VerificationService(identities, audit, clock=clock)
-    return identity_service, verification, audit, identities, audit_repo
+    yield identity_service, verification, audit, identities, audit_repo
+    connection.close()
 
 
 @pytest.fixture

@@ -159,8 +159,8 @@ class IdentityService:
         self,
         actor: OrganisationRole,
         identity_id: str,
-        entitlements,
-        restrictions,
+        entitlements: str | list[str],
+        restrictions: str | list[str],
     ) -> DigitalID:
         require(actor, "update")
         ents = validate_driving_entitlements(entitlements)
@@ -264,8 +264,4 @@ class IdentityService:
 __all__ = [
     "IdentityService",
     "NewIdentity",
-    "DrivingEntitlement",
-    "DrivingRestriction",
-    "ResidencyStatus",
-    "TaxBand",
 ]

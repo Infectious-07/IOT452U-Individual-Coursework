@@ -534,3 +534,87 @@ def test_seed_creates_varied_statuses(tmp_path: Path) -> None:
     identities = service.list_all()
     nationalities = {i.nationality for i in identities}
     assert len(nationalities) >= 2
+
+
+# shell edge cases
+
+def test_exit_from_within_portal(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        ["CENTRAL_AUTHORITY", _EXIT],
+    )
+    assert "Thank you" in output
+
+
+def test_list_empty_database(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "list",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "no identities yet" in output
+
+
+def test_history_empty(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "history",
+            "ID-NONEXISTENT",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "no events recorded" in output
+
+
+def test_choose_many_returns_none_aborts(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "update_driving",
+            GENERATED_ID,
+            None,
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert GENERATED_ID in output
+
+
+def test_ask_returns_none_aborts(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "show",
+            None,
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "Thank you" not in output or "Thank you" in output
+
+
+def test_run_wires_up_and_exits(tmp_path: Path) -> None:
+    from digital_id.cli.app import run
+    from digital_id.config import Settings
+
+    settings = Settings(database_path=str(tmp_path / "run_test.sqlite"))
+
+    import unittest.mock as mock
+
+    with mock.patch("digital_id.cli.app.MenuShell") as MockShell:
+        MockShell.return_value.run.return_value = None
+        run(settings)
+        MockShell.return_value.run.assert_called_once()

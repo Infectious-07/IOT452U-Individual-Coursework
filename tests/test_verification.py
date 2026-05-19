@@ -146,6 +146,17 @@ def test_dvla_marks_revoked_as_not_active(wired) -> None:
     assert response.restricted_now is False
 
 
+def test_tax_detects_revocation_in_period(wired) -> None:
+    identity_service, verification, *_ = wired
+    _create_with_tax(identity_service)
+    identity_service.revoke(CENTRAL, "ID-001")
+    response = verification.verify_for_tax(
+        TAX, "ID-001", date(2026, 1, 1), date(2026, 12, 31)
+    )
+    assert response.active_now is False
+    assert response.exists is True
+
+
 def test_tax_returns_none_fields_when_no_tax_set(wired) -> None:
     identity_service, verification, *_ = wired
     identity_service.create(CENTRAL, make_new_identity())

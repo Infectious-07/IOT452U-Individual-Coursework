@@ -136,6 +136,10 @@ def test_name_validates() -> None:
         validate_name("Ada 9")
 
 
+def test_dob_accepts_date_object() -> None:
+    assert validate_dob(date(1990, 5, 1)) == date(1990, 5, 1)
+
+
 def test_dob_validates() -> None:
     assert validate_dob("1990-05-01") == date(1990, 5, 1)
     future = (date.today() + timedelta(days=1)).isoformat()
