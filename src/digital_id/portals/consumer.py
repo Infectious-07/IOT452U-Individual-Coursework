@@ -6,12 +6,20 @@ from datetime import date
 from ..authorisation.roles import OrganisationRole
 from ..cli.render import dvla_response_table, employer_response_table, tax_response_table
 from ..domain.exceptions import ValidationError
+from ..domain.validators import validate_identity_id
 from ..services.verification import VerificationService
 from .base import Argument, Command, Portal
 
 
+def _validate_date(value: str) -> None:
+    try:
+        date.fromisoformat(value.strip())
+    except ValueError as exc:
+        raise ValidationError("date", "expected ISO date YYYY-MM-DD") from exc
+
+
 def _identity_arg() -> Argument:
-    return Argument("identity_id", "Identity ID")
+    return Argument("identity_id", "Identity ID", validator=validate_identity_id)
 
 
 def build_tax_portal(verification: VerificationService) -> Portal:
@@ -22,11 +30,8 @@ def build_tax_portal(verification: VerificationService) -> Portal:
     )
 
     def verify(args: Mapping[str, str]):
-        try:
-            start = date.fromisoformat(args["period_start"])
-            end = date.fromisoformat(args["period_end"])
-        except ValueError as exc:
-            raise ValidationError("period", "expected ISO dates YYYY-MM-DD") from exc
+        start = date.fromisoformat(args["period_start"])
+        end = date.fromisoformat(args["period_end"])
         response = verification.verify_for_tax(
             OrganisationRole.TAX, args["identity_id"], start, end
         )
@@ -39,8 +44,8 @@ def build_tax_portal(verification: VerificationService) -> Portal:
             "Check identity exists, is active and was not suspended in the period.",
             (
                 _identity_arg(),
-                Argument("period_start", "Period start (YYYY-MM-DD)"),
-                Argument("period_end", "Period end (YYYY-MM-DD)"),
+                Argument("period_start", "Period start (YYYY-MM-DD)", validator=_validate_date),
+                Argument("period_end", "Period end (YYYY-MM-DD)", validator=_validate_date),
             ),
             verify,
         )

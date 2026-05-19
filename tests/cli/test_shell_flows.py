@@ -196,22 +196,121 @@ def test_unknown_identity_is_rejected(shell_setup) -> None:
     assert "rejected: identity not found: ID-999" in output
 
 
-def test_validation_error_is_rejected(shell_setup) -> None:
+def test_validation_rejects_bad_id_after_three_attempts(shell_setup) -> None:
     output = run_shell(
         shell_setup,
         [
             "CENTRAL_AUTHORITY",
             "create",
             "BAD",
-            "Ada",
-            "1990-05-01",
-            "GB",
-            "10 Downing Street",
+            "NO",
+            "X",
             "__back__",
             _EXIT,
         ],
     )
-    assert "rejected" in output
+    assert "invalid" in output.lower()
+    assert "Too many invalid attempts" in output
+
+
+def test_blank_required_field_is_rejected(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            "",
+            "",
+            "",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "Cannot be blank" in output
+    assert "Too many invalid attempts" in output
+
+
+def test_invalid_input_retries_then_succeeds(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            "BAD",
+            "ID-002",
+            "Ada Lovelace",
+            "1990-05-01",
+            "GB",
+            "10 Downing Street, London",
+            "show",
+            "ID-002",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "invalid" in output.lower()
+    assert "ID-002" in output
+    assert "Ada Lovelace" in output
+    assert "ACTIVE" in output
+
+
+def test_invalid_date_is_caught_at_prompt(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            "ID-003",
+            "Ada Lovelace",
+            "not-a-date",
+            "also-bad",
+            "1990-05-01",
+            "GB",
+            "10 Downing Street, London",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "invalid" in output.lower()
+    assert "ID-003" in output
+
+
+def test_consumer_portal_validates_identity_id(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "DVLA",
+            "verify",
+            "X",
+            "AB",
+            "NO",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "invalid" in output.lower()
+    assert "Too many invalid attempts" in output
+
+
+def test_tax_portal_validates_dates(shell_setup) -> None:
+    output = run_shell(
+        shell_setup,
+        [
+            "CENTRAL_AUTHORITY",
+            "create",
+            *BASE_CREATE,
+            "__back__",
+            "TAX",
+            "verify",
+            "ID-001",
+            "bad-date",
+            "2026-01-01",
+            "2026-12-31",
+            "__back__",
+            _EXIT,
+        ],
+    )
+    assert "invalid" in output.lower()
 
 
 def test_export_writes_files(shell_setup, tmp_path: Path) -> None:

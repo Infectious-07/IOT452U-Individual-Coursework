@@ -8,6 +8,7 @@ from ..authorisation.roles import OrganisationRole
 
 CommandResult = Any
 CommandHandler = Callable[[Mapping[str, str]], CommandResult]
+Validator = Callable[[str], object]
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,7 @@ class Argument:
     key: str
     label: str
     default: str | None = None
+    validator: Validator | None = None
 
 
 @dataclass(frozen=True)

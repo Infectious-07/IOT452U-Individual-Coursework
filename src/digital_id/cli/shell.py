@@ -4,12 +4,13 @@ from collections.abc import Mapping
 
 from ..authorisation.roles import OrganisationRole
 from ..domain.exceptions import DigitalIdError
-from ..portals.base import Portal
+from ..portals.base import Argument, Portal
 from .prompter import Choice, Prompter, QuestionaryPrompter
 from .screen import Screen
 
 _BACK = "__back__"
 _EXIT = "__exit__"
+_MAX_ATTEMPTS = 3
 
 
 class MenuShell:
@@ -78,13 +79,42 @@ class MenuShell:
                 continue
             self._run_command(portal, command)
 
+    def _collect_argument(self, argument: Argument) -> str | None:
+        for attempt in range(_MAX_ATTEMPTS):
+            remaining = _MAX_ATTEMPTS - attempt - 1
+            value = self._prompter.ask(argument.label, default=argument.default)
+            if value is None:
+                return None
+            if not value.strip() and argument.default is None:
+                if remaining:
+                    self._screen.warning(
+                        f"Cannot be blank. {remaining} attempt(s) remaining."
+                    )
+                else:
+                    self._screen.error("Too many invalid attempts.")
+                continue
+            if argument.validator is not None:
+                try:
+                    argument.validator(value)
+                except Exception as err:
+                    if remaining:
+                        self._screen.warning(
+                            f"{err} ({remaining} attempt(s) remaining)"
+                        )
+                    else:
+                        self._screen.error("Too many invalid attempts.")
+                    continue
+            return value
+        return None
+
     def _run_command(self, portal: Portal, command) -> None:
         self._screen.clear()
         self._screen.header(portal.title, command.label)
         args: dict[str, str] = {}
         for argument in command.arguments:
-            value = self._prompter.ask(argument.label, default=argument.default)
+            value = self._collect_argument(argument)
             if value is None:
+                self._after_action()
                 return
             args[argument.key] = value
         if command.confirmation is not None and not self._prompter.confirm(

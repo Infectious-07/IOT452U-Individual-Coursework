@@ -10,6 +10,19 @@ from ..cli.render import (
     identity_panel,
     stats_table,
 )
+from ..domain.exceptions import ValidationError
+from ..domain.validators import (
+    validate_address,
+    validate_dob,
+    validate_driving_entitlements,
+    validate_driving_restrictions,
+    validate_identity_id,
+    validate_name,
+    validate_nationality,
+    validate_residency_status,
+    validate_tax_band,
+    validate_tax_reference,
+)
 from ..services.audit_service import AuditService
 from ..services.export_service import ExportService
 from ..services.identity_service import IdentityService, NewIdentity
@@ -17,6 +30,11 @@ from ..services.stats_service import StatsService
 from .base import Argument, Command, Portal
 
 ROLE = OrganisationRole.CENTRAL_AUTHORITY
+
+
+def _validate_yes_no(value: str) -> None:
+    if value.strip().lower() not in {"yes", "no", "y", "n", "true", "false", "1", "0"}:
+        raise ValidationError("right_to_work", "expected yes or no")
 
 
 def build_central_portal(
@@ -117,7 +135,7 @@ def build_central_portal(
     def stats(_args: Mapping[str, str]):
         return stats_table(stats_service.snapshot(ROLE))
 
-    _id = Argument("identity_id", "Identity ID")
+    _id = Argument("identity_id", "Identity ID", validator=validate_identity_id)
 
     portal.add(
         Command(
@@ -125,11 +143,11 @@ def build_central_portal(
             "Create a Digital ID",
             "Issue a new Digital ID with the mandatory base attributes",
             (
-                Argument("identity_id", "Identity ID"),
-                Argument("name", "Full name"),
-                Argument("dob", "Date of birth (YYYY-MM-DD)"),
-                Argument("nationality", "Nationality (ISO 3166 alpha-2)", default="GB"),
-                Argument("address", "Address"),
+                Argument("identity_id", "Identity ID", validator=validate_identity_id),
+                Argument("name", "Full name", validator=validate_name),
+                Argument("dob", "Date of birth (YYYY-MM-DD)", validator=validate_dob),
+                Argument("nationality", "Nationality (ISO 3166 alpha-2)", default="GB", validator=validate_nationality),
+                Argument("address", "Address", validator=validate_address),
             ),
             create,
         )
@@ -139,7 +157,7 @@ def build_central_portal(
             "update_name",
             "Update name",
             "Change the name on an existing record",
-            (_id, Argument("name", "New name")),
+            (_id, Argument("name", "New name", validator=validate_name)),
             update_name,
         )
     )
@@ -148,7 +166,7 @@ def build_central_portal(
             "update_address",
             "Update address",
             "Change the registered address",
-            (_id, Argument("address", "New address")),
+            (_id, Argument("address", "New address", validator=validate_address)),
             update_address,
         )
     )
@@ -159,8 +177,8 @@ def build_central_portal(
             "Set or clear the tax reference and band",
             (
                 _id,
-                Argument("tax_reference", "Tax reference (blank to clear)", default=""),
-                Argument("tax_band", "Tax band (BASIC, HIGHER, ADDITIONAL, EXEMPT)", default=""),
+                Argument("tax_reference", "Tax reference (blank to clear)", default="", validator=validate_tax_reference),
+                Argument("tax_band", "Tax band (BASIC, HIGHER, ADDITIONAL, EXEMPT)", default="", validator=validate_tax_band),
             ),
             update_tax,
         )
@@ -176,11 +194,13 @@ def build_central_portal(
                     "entitlements",
                     "Entitlement codes, comma separated (A, B, C, C1, D, D1)",
                     default="",
+                    validator=validate_driving_entitlements,
                 ),
                 Argument(
                     "restrictions",
                     "Restriction codes, comma separated (GLASSES, AUTOMATIC_ONLY, DAYTIME_ONLY, HEARING_AID)",
                     default="",
+                    validator=validate_driving_restrictions,
                 ),
             ),
             update_driving,
@@ -193,11 +213,12 @@ def build_central_portal(
             "Set the right to work flag and the residency status",
             (
                 _id,
-                Argument("right_to_work", "Right to work (yes/no)", default="no"),
+                Argument("right_to_work", "Right to work (yes/no)", default="no", validator=_validate_yes_no),
                 Argument(
                     "residency",
                     "Residency (CITIZEN, RESIDENT, TEMPORARY, NONE)",
                     default="NONE",
+                    validator=validate_residency_status,
                 ),
             ),
             update_eligibility,
